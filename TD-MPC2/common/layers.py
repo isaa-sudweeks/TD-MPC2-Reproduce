@@ -2,7 +2,36 @@ import torch
 import torch.nn as nn 
 import torch.nn.functional as F 
 from tensordict import from_modules 
-from copy import deepcopy 
+from copy import deepcopy
+
+
+# Figure out what the heck this is doing.
+class Ensemble(nn.Module):
+    """
+    Ensemble of models
+    """
+    def __init__(self, modules, **kwargs):
+        super().__init__()
+        self.params = from_modules(*modules, as_module=True)
+        with self.params[0].data.to("meta").to_module(modules[0]):
+            self.module = deepcopy(modules[0])
+        self._repr = str(self.module[0])
+        self._n = len(modules)
+
+        def __len__(self):
+            return self._n 
+
+        def _call(self, params, *args, **kwargs):
+            with params.to_module(self.module):
+                return self.module(*args, **kwargs)
+            
+        def forward(self, *args, **kwargs):
+            return torch.vmap(self._call, (0, None), randomness="different")(self.params, *args, **kwargs)
+
+        def __repr__(self):
+            return f"Vectorized {len(self)}x {self._repr}"
+
+    
 
 #TODO: I need to learn what this is and why it is useful
 class SimNorm(nn.Module):
@@ -60,3 +89,19 @@ def mlp(in_dim, mlp_dims, out_dim, act=None, droput=0.):
     mlp.append(NormedLinear(dims[-2], dims[-1], dropout=dropout*(i==0), act=act) if act else nn.Linear(dims[-2], dims[-1]))
     return nn.Sequential(*mlp)
 
+#TODO: Figure out what the heck this is
+def enc(cfg, out=None):
+    """
+    Returns a dictionary of encoders for each observation in the dict.
+    """
+    if out is None:
+        out = {}
+    
+    for k in cfg.obs_shape.keys():
+        if k == "state":
+            out[k] = mlp(cfg.obs_shape[k][0] + cfg.task_dim, max(cfg.num_enc_layers-1,1)*[cfg.enc_dim], cfg.latent_dim, act=SimNorm(cfg))
+
+        else:
+            raise NotImplementedError(f"Encoder for observation type {k} not implemented.")
+
+    return nn.ModuleDict(out)
