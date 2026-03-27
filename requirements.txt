@@ -1,0 +1,6 @@
+dm_control
+stable-baselines3
+gymnasium
+shimmy[dm-control]
+hydra-core
+wandb
