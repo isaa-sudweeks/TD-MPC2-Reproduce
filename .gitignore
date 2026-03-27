@@ -62,3 +62,17 @@ venv.bak/
 
 # macOS
 .DS_Store
+
+# Weights & Biases
+wandb/
+
+# Hydra outputs
+outputs/
+multirun/
+
+# Tensorboard / Stable Baselines 3 Logs
+runs/
+
+# Saved Models
+models/
+*.zip
