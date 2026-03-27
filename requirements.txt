@@ -4,3 +4,4 @@ gymnasium
 shimmy[dm-control]
 hydra-core
 wandbtensorboard
+torchrl
