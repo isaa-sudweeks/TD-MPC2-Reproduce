@@ -183,7 +183,39 @@ class WorldModel(nn.Module):
         })
         return action, info
 
-    
+    def Q(self, z, a, task, return_type="min", terget=False, detach=False):
+        """
+        Predict state-action value.
+        'return_type' can be one of the following: ['min', 'avg', 'all']:
+            'min': returns the minimum Q-value across all Q-networks
+            'avg': returns the average Q-value across all Q-networks
+            'all': returns all Q-values
+        'target' determines whether to use the target Q-networks
+        'detach' determines whether to detach the Q-networks
+        """
+        assert return_type in {'min', 'avg', 'all'}
+
+        if self.cfg.multitask:
+            z = self.task_emb(z, task)
+        z = torch.cat([z, a], dim=-1)
+        if target:
+            qnet = self._target_Qs
+        elif detach:
+            qnet = self._detach_Qs
+        else:
+            qnet = self._Qs
+        
+        out = qnet(z)
+
+        if return_type == 'all':
+            return out
+        
+        qidx = torch.randper(self.cfg.num_q, device=out.device)[:2]
+        Q = math.two_hot_inv(out[qidx], self.cfg)
+        if return_type == 'min':
+            return Q.min(0).values 
+        return Q.sum(0) / 2
+        
             
 
     
