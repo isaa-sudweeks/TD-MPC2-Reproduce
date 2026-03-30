@@ -1,6 +1,7 @@
 dm_control
 stable-baselines3
-gymnasium
+gymnasium[box2d]
+gymnasium[mujoco]
 shimmy[dm-control]
 hydra-core
 wandbtensorboard
