@@ -8,6 +8,8 @@ hydra:
     mem_gb: 64
     additional_parameters:
       gpus: h200:1
+      mail-user: isuds@byu.edu
+      mail-type: BEGIN,END,FAIL
 
 
 # environment
