@@ -1,5 +1,14 @@
 defaults:
-    - override hydra/launcher: submitit_local
+    - override hydra/launcher: submitit_slurm
+
+#Slurm 
+hydra:
+  launcher:
+    timeout_min: 10
+    mem_gb: 64
+    additional_parameters:
+      gpus: h200:1
+
 
 # environment
 task: dog-run

@@ -20,7 +20,7 @@ from trainer.online_trainer import OnlineTrainer
 from common.logger import Logger
 
 torch.backends.cudnn.benchmark = True 
-torch.set_float32_matmul_percision('high')
+torch.set_float32_matmul_precision('high')
 
 @hydra.main(config_name = 'config', config_path='.')
 def train(cfg):

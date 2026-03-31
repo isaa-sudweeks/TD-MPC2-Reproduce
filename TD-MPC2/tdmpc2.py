@@ -120,7 +120,7 @@ class TDMPC2(torch.nn.Module):
             action = info['mean']
         return action[0].cpu()
 
-    @torch.no_gra()
+    @torch.no_grad()
     def _estimate_value(self, z, actions, task):
         """
         Estimate value of a trajectory starting at latent state z and executing given actions.

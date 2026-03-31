@@ -1,6 +1,6 @@
 import numpy as np 
 import gymnasium as gym 
-from envs.wappers.timeout import Timeout 
+from envs.wrappers.timeout import Timeout 
 
 
 # How to add my own custon task 

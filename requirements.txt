@@ -8,3 +8,5 @@ wandb
 tensorboard
 torchrl
 termcolor
+submitit
+hydra-submitit-launcher

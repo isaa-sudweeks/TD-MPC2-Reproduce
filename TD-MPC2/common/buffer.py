@@ -1,7 +1,7 @@
 import torch
 from tensordict.tensordict import TensorDict
 from torchrl.data.replay_buffers import ReplayBuffer, LazyTensorStorage
-from torchrl.data.replay_buffers.samplers import SliceSample
+from torchrl.data.replay_buffers.samplers import SliceSampler
 
 # TODO: I need to learn what this is and why it is useful I honestly do not know any of this
 
