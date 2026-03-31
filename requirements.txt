@@ -4,5 +4,7 @@ gymnasium[box2d]
 gymnasium[mujoco]
 shimmy[dm-control]
 hydra-core
-wandbtensorboard
+wandb
+tensorboard
 torchrl
+termcolor
