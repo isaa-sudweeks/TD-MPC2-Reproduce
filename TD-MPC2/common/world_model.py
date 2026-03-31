@@ -14,7 +14,7 @@ class WorldModel(nn.Module):
         self.cfg = cfg
         if cfg.multitask:
             self._task_emb == nn.Embedding(len(cfg.tasks), cfg.task_dim, max_norm=1) # TODO: Figure out what the nn.Embedding does '
-            self.register_buffer("_action_masks", torch.zeros(len(cfg.tasks), cfg.action_dim)) #TOD: Figure out what this does 
+            self.register_buffer("_action_masks", torch.zeros(len(cfg.tasks), cfg.action_dim)) # TODO: Figure out what this does
             for i in range(len(cfg.tasks)):
                 self._action_masks[i, :cfg.action_dims[i]] = 1.
             
@@ -32,12 +32,12 @@ class WorldModel(nn.Module):
         init.zero_([self._reward[-1].weight, self._Qs.params["2", "weight"]])
 
         self.register_buffer("log_std_min", torch.tensor(cfg.log_std_min))
-        self.register_buffer("log_std_def", torch.tensor(cfg.log_sted_max) - self.log_std_min)
+        self.register_buffer("log_std_def", torch.tensor(cfg.log_std_max) - self.log_std_min)
         self.init()
     
     def init(self):
-        # Creat params 
-        self._detache_Qs_params = TensorDictParams(self._Qs.params.data, no_convert=True) # TODO I have no idea what this is or why it is needed
+        # Create params
+        self._detach_Qs_params = TensorDictParams(self._Qs.params.data, no_convert=True) # TODO I have no idea what this is or why it is needed
         self._target_Qs_params = TensorDictParams(self._Qs.params.data.clone(), no_convert=True)
 
         # Create modules 
@@ -86,7 +86,7 @@ class WorldModel(nn.Module):
         self._target_Qs_params.lerp_(self._detach_Qs_params, self.cfg.tau)
 
     def task_emb(self, x, task):
-        """Continuous task embedding for mulit-task experiments.
+        """Continuous task embedding for multi-task experiments.
         Retrieves the task embedding for a given task ID 'task'
         and concatenates it to the input 'x'.
         """
@@ -96,7 +96,7 @@ class WorldModel(nn.Module):
         emb = self._task_emb(task.long())
         if x.ndim ==3:
             emb = emb.unsqueeze(0).repeat(x.shape[0], 1, 1)
-        elif emb.shap[0] == 1:
+        elif emb.shape[0] == 1:
             emb = emb.repeat(x.shape[0], 1)
         return torch.cat([x, emb], dim=-1)
 

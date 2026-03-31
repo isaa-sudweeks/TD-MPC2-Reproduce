@@ -28,10 +28,10 @@ class TDMPC2(torch.nn.Module):
             {'params': self.model._Qs.parameters()},
             {'params': self.model._task_emb.parameters() if self.cfg.multitask else []}
         ], lr=self.cfg.lr, capturable=True)
-        self.pi_optim = torch.optim.Adam(self.model._pi.parameters(), lr=self.cfg.lr, eps=1e-5, capturable=True) # Why is this seperate
+        self.pi_optim = torch.optim.Adam(self.model._pi.parameters(), lr=self.cfg.lr, eps=1e-5, capturable=True) # Why is this separate
         self.model.eval()
         self.scale = RunningScale(cfg)
-        self.cfg.iterations += 2*int(cfg.action_dim >= 20) # Heuristic for large action spaces but TODO: I still don't know what this is doing or why we needing 
+        self.cfg.iterations += 2*int(cfg.action_dim >= 20) # Heuristic for large action spaces but TODO: I still don't know what this is doing or why we need this
         self.discount = torch.tensor(
             [self._get_discount(ep_len) for ep_len in cfg.episode_lengths], device='cuda:0'
         ) if self.cfg.multitask else self._get_discount(cfg.episode_length)
@@ -160,7 +160,7 @@ class TDMPC2(torch.nn.Module):
             _z = z.repeat(self.cfg.num_pi_trajs, 1)
             for t in range(self.cfg.horizon-1):
                 pi_actions[t], _ = self.model.pi(_z, task)
-                _z = self.model.next(_z, pi_actions[t], task) #TODO: I dont really remeber what this does
+                _z = self.model.next(_z, pi_actions[t], task) # TODO: I don't really remember what this does
             pi_actions[-1], _ = self.model.pi(_z, task)
         
         # Initialize state and parameters 
@@ -177,17 +177,17 @@ class TDMPC2(torch.nn.Module):
         for _ in range(self.cfg.iterations):
 
             # Sample actions 
-            r = torch.randn(self.cfg.horizon, self.cfg.num_samples - self.cfg.num_pi_trajs, self.cfg.actions_dim, device=std.device)
+            r = torch.randn(self.cfg.horizon, self.cfg.num_samples - self.cfg.num_pi_trajs, self.cfg.action_dim, device=std.device)
             actions_sample = mean.unsqueeze(1) + std.unsqueeze(1) * r 
             actions_sample = actions_sample.clamp(-1, 1)
             actions[:, self.cfg.num_pi_trajs:] = actions_sample 
             if self.cfg.multitask:
-                actions = actions * self.model._actions_masks[task]
+                actions = actions * self.model._action_masks[task]
             
             # Compute 'elite' actions 
             value = self._estimate_value(z, actions, task).nan_to_num(nan=0)
             elite_idxs = torch.topk(value.squeeze(1), self.cfg.num_elites, dim=0).indices 
-            elite_value, elite_actions = value[elite_idxs], actions[:, elited_idxs]
+            elite_value, elite_actions = value[elite_idxs], actions[:, elite_idxs]
 
             # Update parameters 
             max_value = elite_value.max(0).values 
@@ -197,7 +197,7 @@ class TDMPC2(torch.nn.Module):
             std = ((score.unsqueeze(0) * (elite_actions - mean.unsqueeze(1)) ** 2).sum(dim=1) / (score.sum(0) + 1e-9)).sqrt()
             std = std.clamp(self.cfg.min_std, self.cfg.max_std)
             if self.cfg.multitask:
-                mean = mean * self.model._actions_masks[task]
+                mean = mean * self.model._action_masks[task]
                 std = std * self.model._action_masks 
         
         # Select best action 
@@ -229,7 +229,7 @@ class TDMPC2(torch.nn.Module):
 
         # Loss is a weighted sum of Q-values 
         rho = torch.pow(self.cfg.rho, torch.arange(len(qs), device=self.device))
-        pi_loss = (-(self.cfg.entropy_coef * info["scaled_entropy"] + qs).mean(dim=(1,2)) * rho).mean() # TODO: I don't realy know what this is doing at all
+        pi_loss = (-(self.cfg.entropy_coef * info["scaled_entropy"] + qs).mean(dim=(1,2)) * rho).mean() # TODO: I don't really know what this is doing at all
         pi_loss.backward()
         pi_grad_norm = torch.nn.utils.clip_grad_norm_(self.model._pi.parameters(), self.cfg.grad_clip_norm) # I also don't know what this is
         self.pi_optim.step()
@@ -366,6 +366,5 @@ class TDMPC2(torch.nn.Module):
             
 
             
-
 
 

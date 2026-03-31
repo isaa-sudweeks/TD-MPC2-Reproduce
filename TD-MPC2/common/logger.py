@@ -1,6 +1,6 @@
 # Copied from https://github.com/edbeeching/td_mpc2/blob/main/common/logger.py
 
-#TODO: Consider finding out what this is and why it is importaint. 
+# TODO: Consider finding out what this is and why it is important.
 import dataclasses
 import os
 import datetime

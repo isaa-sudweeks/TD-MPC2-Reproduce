@@ -1,4 +1,4 @@
-# TD-MPC2 Reproduce
+# TD-MPC2 Reproduction
 
 Repository for reproducing TD-MPC2.
 

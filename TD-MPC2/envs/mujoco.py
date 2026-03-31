@@ -3,13 +3,13 @@ import gymnasium as gym
 from envs.wrappers.timeout import Timeout 
 
 
-# How to add my own custon task 
+# How to add my own custom task
 # Step 1: Add the class task definition to the tasks folder 
 # Step 2: Register the environment 
 # ```python 
 # import gymnasium as gym 
 # gym.register(
-# id = "MyCustomTaks-v0", entry_point="my_custom_env:MyCustomEnv", max_episode_stems=1000
+# id = "MyCustomTask-v0", entry_point="my_custom_env:MyCustomEnv", max_episode_steps=1000
 # )
 # ```
 # Step 3: Add the task to the MUJOCO_TASKS dictionary 
@@ -70,4 +70,3 @@ def make_env(cfg):
     cfg.discount_max = 0.99 
     cfg.rho = 0.7 # Increase this for tasks that are episodic #TODO
     return env 
-

@@ -30,7 +30,7 @@ warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 def make_env(cfg):
     """
-    Make an enviroment for TD-MPC2 experiments.
+    Make an environment for TD-MPC2 experiments.
     """
     gym.logger.set_level(40)
     if cfg.multitask:
@@ -43,14 +43,14 @@ def make_env(cfg):
             except ValueError:
                 pass 
         if env is None:
-            raise ValueError(f'Failed to make enviroment "{cfg.task}": please verify that dependecies are installed and that the task exists.')
+            raise ValueError(f'Failed to make environment "{cfg.task}": please verify that dependencies are installed and that the task exists.')
         env = TensorWrapper(env)
         try: # Dict
             cfg.obs_shape = {k: v.shape for k, v in env.observation_space.spaces.items()}
         except: #Box 
             cfg.obs_shape = {cfg.get('obs', 'state'): env.observation_space.shape}
         cfg.action_dim = env.action_space.shape[0]
-        cfg.episode_length = env.max_episode_stems
+        cfg.episode_length = env.max_episode_steps
         cfg.seed_steps = max(1000, 5*cfg.episode_length)
         # TODO: Add support for wrappers
         return env 

@@ -89,11 +89,11 @@ class OnlineTrainer(Trainer):
             if self._step % self.cfg.eval_freq == 0:
                 eval_next = True 
             
-            # Reset eniroment 
+            # Reset environment
             if done:
                 if eval_next:
                     eval_metrics = self.eval()
-                    eval_metrics.update(self.common_matrics())
+                    eval_metrics.update(self.common_metrics())
                     self.logger.log(eval_metrics, 'eval')
                     eval_next = False
                 if self._step > 0:

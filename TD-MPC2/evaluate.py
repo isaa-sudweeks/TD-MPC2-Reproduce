@@ -7,11 +7,11 @@ import hydra
 import imageio
 import numpy as np 
 import torch 
-from termcolor import colord 
+from termcolor import colored 
 
 from common.parser import parse_cfg
 from common.seed import set_seed 
-from envs import make_env #TODO: I havent implented this yet 
+from envs import make_env # TODO: I haven't implemented this yet
 from tdmpc2 import TDMPC2 
 
 torch.backends.cudnn.benchmark = True 
