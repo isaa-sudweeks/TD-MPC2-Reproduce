@@ -32,7 +32,10 @@ def make_env(cfg):
     """
     Make an environment for TD-MPC2 experiments.
     """
-    gym.logger.set_level(40)
+    if hasattr(gym.logger, "set_level"):
+        gym.logger.set_level(40)
+    else:
+        gym.logger.min_level = 40
     if cfg.multitask:
         raise NotImplementedError("Multitask envs not implemented yet")
     else:
