@@ -133,13 +133,15 @@ class Logger:
 		wandb.init(
 			project=self.project,
 			entity=self.entity,
+			mode="offline",
 			name=str(cfg.seed),
 			group=self._group,
 			tags=cfg_to_group(cfg, return_list=True) + [f"seed:{cfg.seed}"],
 			dir=self._log_dir,
 			config=dataclasses.asdict(cfg),
 		)
-		print(colored("Logs will be synced with wandb.", "blue", attrs=["bold"]))
+		print(colored("Wandb initialized in offline mode.", "blue", attrs=["bold"]))
+		print(colored(f"Sync with: wandb sync {self._log_dir / 'wandb' / 'offline-run-*'}", "blue"))
 		self._wandb = wandb
 		self._video = (
 			VideoRecorder(cfg, self._wandb)
