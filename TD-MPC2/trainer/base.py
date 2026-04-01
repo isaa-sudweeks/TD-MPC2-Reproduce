@@ -1,16 +1,19 @@
 from copy import deepcopy
 
+import optuna
+
 
 class Trainer:
     """
     Base trainer class for TD-MPC2.
     """
-    def __init__(self, cfg, env, agent, buffer, logger):
+    def __init__(self, cfg, env, agent, buffer, logger, trial=None):
         self.cfg = cfg 
         self.env = env 
         self.agent = agent 
         self.buffer = buffer 
         self.logger = logger 
+        self.trial = trial
         self._best_eval_metrics = None
         print('Architecture:' , self.agent.model)
 
@@ -64,6 +67,19 @@ class Trainer:
         if self._best_eval_metrics is None:
             raise RuntimeError("Training finished without producing any evaluation metrics.")
         return self.objective_value(self._best_eval_metrics)
+
+    def report_eval_metrics(self, metrics, step):
+        """
+        Report intermediate objective values to Optuna and prune if requested.
+        """
+        self.update_best_eval_metrics(metrics)
+        if self.trial is None:
+            return
+        value, metric = self.objective_value(metrics)
+        self.trial.report(value, step=step)
+        if self.trial.should_prune():
+            print(f"Pruning trial {self.trial.number} on {metric}={value:.6f} at step {step}.")
+            raise optuna.TrialPruned(f"Pruned on {metric}={value:.6f} at step {step}")
 
     def eval(self):
         """

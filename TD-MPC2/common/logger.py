@@ -78,6 +78,30 @@ def cfg_to_group(cfg, return_list=False):
 	return lst if return_list else "-".join(lst)
 
 
+def wandb_run_name(cfg):
+	"""
+	Construct a wandb run name for both standard runs and Optuna trials.
+	"""
+	if cfg.get("optuna_trial_number", None) is None:
+		return str(cfg.seed)
+	return f"trial-{int(cfg.optuna_trial_number):04d}-seed-{cfg.seed}"
+
+
+def wandb_tags(cfg):
+	"""
+	Construct wandb tags, including Optuna metadata when present.
+	"""
+	tags = cfg_to_group(cfg, return_list=True) + [f"seed:{cfg.seed}"]
+	study_name = cfg.get("optuna_study_name", None)
+	trial_number = cfg.get("optuna_trial_number", None)
+	if study_name:
+		tags.append("optuna")
+		tags.append(f"study:{study_name}")
+	if trial_number is not None:
+		tags.append(f"trial:{int(trial_number)}")
+	return tags
+
+
 class VideoRecorder:
 	"""Utility class for logging evaluation videos."""
 
@@ -110,6 +134,7 @@ class Logger:
 	"""Primary logging object. Logs either locally or using wandb."""
 
 	def __init__(self, cfg):
+		self.cfg = cfg
 		self._log_dir = make_dir(cfg.work_dir)
 		self._model_dir = make_dir(self._log_dir / "models")
 		self._save_csv = cfg.save_csv
@@ -134,9 +159,9 @@ class Logger:
 			project=self.project,
 			entity=self.entity,
 			mode="offline",
-			name=str(cfg.seed),
+			name=wandb_run_name(cfg),
 			group=self._group,
-			tags=cfg_to_group(cfg, return_list=True) + [f"seed:{cfg.seed}"],
+			tags=wandb_tags(cfg),
 			dir=self._log_dir,
 			config=dataclasses.asdict(cfg),
 		)
@@ -175,6 +200,13 @@ class Logger:
 		except Exception as e:
 			print(colored(f"Failed to save model: {e}", "red"))
 		if self._wandb:
+			self._wandb.config.update(
+				{
+					"optuna_trial_state": self.cfg.get("optuna_trial_state", None),
+					"optuna_trial_params": self.cfg.get("optuna_trial_params", None),
+				},
+				allow_val_change=True,
+			)
 			self._wandb.finish()
 
 	def _format(self, key, value, ty):

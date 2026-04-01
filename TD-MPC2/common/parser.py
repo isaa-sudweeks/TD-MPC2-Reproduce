@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any
 
 import hydra
-from hydra.core.hydra_config import HydraConfig
 from omegaconf import OmegaConf
 #Another thing I do not know
 
@@ -56,7 +55,14 @@ def parse_cfg(cfg: OmegaConf) -> OmegaConf:
 			pass
 
 	# Convenience
-	cfg.work_dir = Path(HydraConfig.get().runtime.output_dir)
+	if cfg.get("work_dir", None) not in {None, "???"}:
+		cfg.work_dir = Path(cfg.work_dir)
+	else:
+		try:
+			from hydra.core.hydra_config import HydraConfig
+			cfg.work_dir = Path(HydraConfig.get().runtime.output_dir)
+		except Exception:
+			cfg.work_dir = Path(hydra.utils.get_original_cwd()) / 'logs' / cfg.task / str(cfg.seed) / cfg.exp_name
 	cfg.task_title = cfg.task.replace("-", " ").title()
 	cfg.bin_size = (cfg.vmax - cfg.vmin) / (cfg.num_bins-1) # Bin size for discrete regression
 

@@ -13,23 +13,29 @@ Single run from the repo root:
 python train.py task=mujoco-walker seed=1
 ```
 
-Optuna-driven Slurm multirun from the repo root:
+Hydra multirun from the repo root:
 
 ```bash
-python train.py -m task=mujoco-walker exp_name=optuna-search
+python train.py -m task=mujoco-walker seed=1,2,3
 ```
 
-The multirun path uses Hydra's Optuna sweeper plus the existing `submitit_slurm` launcher, so each Optuna trial is submitted as its own Slurm job. The training function now returns the best evaluation objective from the run, which Optuna uses to rank trials.
+This goes through the normal Hydra multirun path.
+
+Optuna-driven Slurm study with pruning:
+
+```bash
+python train.py -optuna task=mujoco-walker exp_name=optuna-search
+```
+
+This uses the custom Optuna runner plus Slurm workers launched through `submitit`. Each worker owns real Optuna trials backed by shared study storage, reports intermediate evaluation metrics during training, and can prune weak trials early.
 
 Useful overrides:
 
 ```bash
-python train.py -m \
+python train.py -optuna \
   task=mujoco-walker \
   exp_name=optuna-search \
-  hydra.sweeper.n_trials=64 \
-  hydra.sweeper.n_jobs=16 \
-  optimize_metric=episode_reward \
-  hydra.sweeper.params.lr='tag(log, interval(1e-5, 1e-3))' \
-  hydra.sweeper.params.batch_size='choice(128,256,512)'
+  optuna.n_trials=64 \
+  optuna.n_jobs=16 \
+  optimize_metric=episode_reward
 ```
