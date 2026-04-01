@@ -1,7 +1,8 @@
 from copy import deepcopy 
 import warnings 
 
-import gymnasium as gym 
+import gymnasium as gym
+from envs.wrappers.tensor import TensorWrapper
 
 # TODO: Add support for multitask envs 
 
