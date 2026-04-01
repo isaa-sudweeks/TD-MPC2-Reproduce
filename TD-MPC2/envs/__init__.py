@@ -32,6 +32,21 @@ except:
 
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
+def _max_episode_steps(env):
+    """
+    Resolve max episode steps across wrapper stacks.
+    """
+    current = env
+    while current is not None:
+        steps = getattr(current, 'max_episode_steps', None)
+        if steps is not None:
+            return steps
+        current = getattr(current, 'env', None)
+    spec = getattr(env.unwrapped, 'spec', None)
+    if spec is not None and getattr(spec, 'max_episode_steps', None) is not None:
+        return spec.max_episode_steps
+    raise AttributeError('Environment does not define max_episode_steps')
+
 def make_env(cfg):
     """
     Make an environment for TD-MPC2 experiments.
@@ -51,13 +66,14 @@ def make_env(cfg):
                 pass 
         if env is None:
             raise ValueError(f'Failed to make environment "{cfg.task}": please verify that dependencies are installed and that the task exists.')
+        episode_length = _max_episode_steps(env)
         env = TensorWrapper(env)
         try: # Dict
             cfg.obs_shape = {k: v.shape for k, v in env.observation_space.spaces.items()}
         except: #Box 
             cfg.obs_shape = {cfg.get('obs', 'state'): env.observation_space.shape}
         cfg.action_dim = env.action_space.shape[0]
-        cfg.episode_length = env.max_episode_steps
+        cfg.episode_length = episode_length
         cfg.seed_steps = max(1000, 5*cfg.episode_length)
         # TODO: Add support for wrappers
         return env 
