@@ -5,6 +5,9 @@ import gymnasium as gym
 
 # TODO: Add support for multitask envs 
 
+def missing_dependencies(task):
+	raise ValueError(f'Missing dependencies for task {task}; install dependencies to use this environment.')
+
 try:
 	from envs.dmcontrol import make_env as make_dm_control_env
 except:
