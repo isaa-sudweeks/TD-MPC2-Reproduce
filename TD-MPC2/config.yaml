@@ -21,7 +21,7 @@ hydra:
 # environment
 task: mujoco-walker
 obs: state
-episodic: false
+episodic: true
 
 # evaluation
 checkpoint: ???
@@ -29,7 +29,7 @@ eval_episodes: 10
 eval_freq: 5_000
 
 # training
-steps: 50_000
+steps: 1_000_000
 batch_size: 256
 reward_coef: 0.1
 value_coef: 0.1
