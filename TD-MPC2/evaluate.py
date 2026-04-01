@@ -49,7 +49,7 @@ def evaluate(cfg: dict):
         print(colored(f'Evaluating agent on {cfg.task}:', 'yellow', attrs=['bold']))
 
     if cfg.save_video:
-        video_dir = os.path.join(cfg.work_di, 'videos')
+        video_dir = os.path.join(cfg.work_dir, 'videos')
         os.makedirs(video_dir, exist_ok=True)
     scores = []
     tasks = cfg.tasks if cfg.multitask else [cfg.task]

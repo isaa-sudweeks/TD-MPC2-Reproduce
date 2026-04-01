@@ -18,18 +18,18 @@ class Ensemble(nn.Module):
         self._repr = str(self.module[0])
         self._n = len(modules)
 
-        def __len__(self):
-            return self._n 
+    def __len__(self):
+        return self._n 
 
-        def _call(self, params, *args, **kwargs):
-            with params.to_module(self.module):
-                return self.module(*args, **kwargs)
-            
-        def forward(self, *args, **kwargs):
-            return torch.vmap(self._call, (0, None), randomness="different")(self.params, *args, **kwargs)
+    def _call(self, params, *args, **kwargs):
+        with params.to_module(self.module):
+            return self.module(*args, **kwargs)
+        
+    def forward(self, *args, **kwargs):
+        return torch.vmap(self._call, (0, None), randomness="different")(self.params, *args, **kwargs)
 
-        def __repr__(self):
-            return f"Vectorized {len(self)}x {self._repr}"
+    def __repr__(self):
+        return f"Vectorized {len(self)}x {self._repr}"
 
     
 
@@ -48,6 +48,7 @@ class SimNorm(nn.Module):
         x = x.view(*shp[:-1], -1, self.dim)
         x = F.softmax(x, dim=-1)
         x = x.view(*shp)
+        return x
     
     def __repr__(self):
         return f"SimNorm(dim={self.dim})"
@@ -76,7 +77,7 @@ class NormedLinear(nn.Linear):
             f"bias={self.bias is not None}{repr_dropout}, "\
             f"act={self.act.__class__.__name__})"
 
-def mlp(in_dim, mlp_dims, out_dim, act=None, droput=0.):
+def mlp(in_dim, mlp_dims, out_dim, act=None, dropout=0.):
     """
     Standard MLP with layernorm mish activations and optionally dropout
     """
@@ -86,7 +87,8 @@ def mlp(in_dim, mlp_dims, out_dim, act=None, droput=0.):
     mlp = nn.ModuleList() # This is really cool you can basically make a list of layers
     for i in range(len(dims) - 2):
         mlp.append(NormedLinear(dims[i], dims[i+1], dropout=dropout*(i==0)))
-    mlp.append(NormedLinear(dims[-2], dims[-1], dropout=dropout*(i==0), act=act) if act else nn.Linear(dims[-2], dims[-1]))
+    final_dropout = dropout if len(dims) == 2 else 0.
+    mlp.append(NormedLinear(dims[-2], dims[-1], dropout=final_dropout, act=act) if act else nn.Linear(dims[-2], dims[-1]))
     return nn.Sequential(*mlp)
 
 #TODO: Figure out what the heck this is
