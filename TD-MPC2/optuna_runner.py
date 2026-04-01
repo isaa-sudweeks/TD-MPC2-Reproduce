@@ -1,5 +1,6 @@
 import datetime
 import time
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
 import optuna
@@ -8,11 +9,22 @@ from omegaconf import OmegaConf
 from optuna.study import MaxTrialsCallback
 from optuna.trial import TrialState
 
-from train import run_training
-
 
 CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
+TRAIN_MODULE_PATH = Path(__file__).resolve().parent / "train.py"
 TERMINAL_STATES = (TrialState.COMPLETE, TrialState.PRUNED, TrialState.FAIL)
+
+
+def _load_run_training():
+    spec = spec_from_file_location("tdmpc2_train", TRAIN_MODULE_PATH)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Unable to load training module from {TRAIN_MODULE_PATH}")
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.run_training
+
+
+run_training = _load_run_training()
 
 
 def _load_cfg(overrides):
