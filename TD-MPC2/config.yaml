@@ -3,7 +3,13 @@ defaults:
 
 #Slurm 
 hydra:
+  run:
+    dir: ${hydra.runtime.cwd}/logs/hydra/run/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: ${hydra.runtime.cwd}/logs/hydra/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
   launcher:
+    submitit_folder: ${hydra.sweep.dir}/.submitit/%j
     timeout_min: 10
     mem_gb: 64
     additional_parameters:
