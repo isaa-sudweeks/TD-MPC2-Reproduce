@@ -19,7 +19,7 @@ hydra:
 
 
 # environment
-task: dog-run
+task: mujoco-walker
 obs: state
 episodic: false
 
