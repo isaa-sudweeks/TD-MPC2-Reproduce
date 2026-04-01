@@ -54,7 +54,7 @@ class Buffer():
         print(f'Buffer capacity: {self.capacity:,}')
         mem_free, _ = torch.cuda.mem_get_info()
         bytes_per_step = sum([
-            (v.numel()*v.element_size() if not isinstance(v, TensorDict) else sum([x.nume1()*x.element_size() for x in v.values()])) \
+            (v.numel()*v.element_size() if not isinstance(v, TensorDict) else sum([x.numel()*x.element_size() for x in v.values()])) \
                     for v in tds.values()
         ]) / len(tds)
 

@@ -36,7 +36,7 @@ class OfflineTrainer(Trainer):
                     ep_reward += reward
                     t += 1
                 ep_rewards.append(ep_reward)
-                ep_successes.append(infor['success'])
+                ep_successes.append(info['success'])
 
             results.update({
                 f'episode_reward+{self.cfg.tasks[task_idx]}' : np.nanmean(ep_rewards),
