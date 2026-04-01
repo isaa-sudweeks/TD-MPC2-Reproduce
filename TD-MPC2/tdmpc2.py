@@ -15,16 +15,17 @@ class TDMPC2(torch.nn.Module):
     ans supports both state and pixel obs, but really just state
     """
 
-    def __ini__(self, cfg):
+    def __init__(self, cfg):
         super().__init__()
+        self.cfg = cfg
         self.device = torch.device('cuda:0')
         self.model = WorldModel(cfg).to(self.device)
         # I understand this for the most part but I need to figure out the mechanics a bit more
         self.optim = torch.optim.Adam([
-            {'params': self.model.encoder.parameters(), 'lr': cfg.enc_lr_scale * cfg.lr},
+            {'params': self.model._encoder.parameters(), 'lr': cfg.enc_lr_scale * cfg.lr},
             {'params': self.model._dynamics.parameters()},
             {'params': self.model._reward.parameters()},
-            {'params': self.model._termination.parameters() if self.cfg.epidodic else []},
+            {'params': self.model._termination.parameters() if self.cfg.episodic else []},
             {'params': self.model._Qs.parameters()},
             {'params': self.model._task_emb.parameters() if self.cfg.multitask else []}
         ], lr=self.cfg.lr, capturable=True)
@@ -38,7 +39,7 @@ class TDMPC2(torch.nn.Module):
 
         print('Episode length:', cfg.episode_length)
         print('Discount factor:', self.discount)
-        self._prev_mean = torch.nn.Buffer(torch.zeros(self.cfg.horizon, self.cfg.action_dim, device = self.device))
+        self.register_buffer("_prev_mean", torch.zeros(self.cfg.horizon, self.cfg.action_dim, device=self.device))
         if cfg.compile:
             print('Compiling update function with torch.compile...')
             self._update = torch.compile(self._update, mode="reduce-overhead")
@@ -168,7 +169,7 @@ class TDMPC2(torch.nn.Module):
         mean = torch.zeros(self.cfg.horizon, self.cfg.action_dim, device=self.device)
         std = torch.full((self.cfg.horizon, self.cfg.action_dim), self.cfg.max_std, dtype=torch.float, device=self.device)
         if not t0:
-            mean[:,-1] = self._prev_mean[1:]
+            mean[:-1] = self._prev_mean[1:]
         actions = torch.empty(self.cfg.horizon, self.cfg.num_samples, self.cfg.action_dim, device=self.device)
         if self.cfg.num_pi_trajs > 0:
             actions[:, :self.cfg.num_pi_trajs] = pi_actions 
@@ -198,7 +199,7 @@ class TDMPC2(torch.nn.Module):
             std = std.clamp(self.cfg.min_std, self.cfg.max_std)
             if self.cfg.multitask:
                 mean = mean * self.model._action_masks[task]
-                std = std * self.model._action_masks 
+                std = std * self.model._action_masks[task]
         
         # Select best action 
         rand_idx = math.gumbel_softmax_sample(score.squeeze(1))
@@ -265,10 +266,10 @@ class TDMPC2(torch.nn.Module):
         # TODO: I don't really get the TD stuff a lot
 
         action, _ = self.model.pi(next_z, task)
-        discount = self.discount[task].unqueeze(-1) if self.cfg.multitask else self.discount 
+        discount = self.discount[task].unsqueeze(-1) if self.cfg.multitask else self.discount
         return reward + discount * (1-terminated) * self.model.Q(next_z, action, task, return_type='min', target=True)
     
-    def _update(self, obs, action, reward, termination, task=None):
+    def _update(self, obs, action, reward, terminated, task=None):
         # Compute targets 
         with torch.no_grad():
             next_z = self.model.encode(obs[1:], task)
@@ -298,9 +299,9 @@ class TDMPC2(torch.nn.Module):
         
         # Compute losses 
         reward_loss, value_loss = 0, 0
-        for t, (rew_pred_unbind, rew_unbind, td_targets_unbind, qs_unbind) in enumerate(zip(rewards_preds.unbind(0), reward.unbind(0), td_targets.unbind(0), qs.unbind(1))):
+        for t, (rew_pred_unbind, rew_unbind, td_targets_unbind, qs_unbind) in enumerate(zip(reward_preds.unbind(0), reward.unbind(0), td_targets.unbind(0), qs.unbind(1))):
             reward_loss = reward_loss + math.soft_ce(rew_pred_unbind, rew_unbind, self.cfg).mean() * self.cfg.rho**t
-            for _, qs_unbind_unbind in enumerate(sq_unbind.unbind(0)):
+            for _, qs_unbind_unbind in enumerate(qs_unbind.unbind(0)):
                 value_loss = value_loss + math.soft_ce(qs_unbind_unbind, td_targets_unbind, self.cfg).mean() * self.cfg.rho**t # TODO I feel like I don't really understand what the Q networks are or what the TD stuff is 
         
         consistency_loss = consistency_loss / self.cfg.horizon 
@@ -340,7 +341,7 @@ class TDMPC2(torch.nn.Module):
             "grad_norm": grad_norm,
         })
         if self.cfg.episodic:
-            info.update(math.termination_statistic(torch.sigmoid(termination_pred[-1]), terminated[-1]))
+            info.update(math.termination_statistics(torch.sigmoid(termination_pred[-1]), terminated[-1]))
 
         info.update(pi_info)
         return info.detach().mean()
@@ -366,5 +367,3 @@ class TDMPC2(torch.nn.Module):
             
 
             
-
-

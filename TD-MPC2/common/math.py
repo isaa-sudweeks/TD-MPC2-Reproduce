@@ -65,7 +65,7 @@ def two_hot(x, cfg):
         return symlog(x)
     x = torch.clamp(symlog(x), cfg.vmin, cfg.vmax).squeeze(1)
     bin_idx = torch.floor((x - cfg.vmin) / cfg.bin_size)
-    bin_offset = ((x - cfg.vmin) / cfg.bin_size - bin_idx).unsqeeze(-1)
+    bin_offset = ((x - cfg.vmin) / cfg.bin_size - bin_idx).unsqueeze(-1)
     soft_two_hot = torch.zeros(x.shape[0], cfg.num_bins, device=x.device, dtype=x.dtype)
     bin_idx = bin_idx.long()
     soft_two_hot = soft_two_hot.scatter(1, bin_idx.unsqueeze(1), 1-bin_offset)
@@ -91,7 +91,7 @@ def gumbel_softmax_sample(p, temperature=1.0, dim=0):
     Sample from the Gumbel-Softmax distribution
     """
 
-    logics = p.log()
+    logits = p.log()
     gumbels = (
         -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()
     )

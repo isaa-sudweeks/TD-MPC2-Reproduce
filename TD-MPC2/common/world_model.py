@@ -13,7 +13,7 @@ class WorldModel(nn.Module):
         super().__init__()
         self.cfg = cfg
         if cfg.multitask:
-            self._task_emb == nn.Embedding(len(cfg.tasks), cfg.task_dim, max_norm=1) # TODO: Figure out what the nn.Embedding does '
+            self._task_emb = nn.Embedding(len(cfg.tasks), cfg.task_dim, max_norm=1) # TODO: Figure out what the nn.Embedding does '
             self.register_buffer("_action_masks", torch.zeros(len(cfg.tasks), cfg.action_dim)) # TODO: Figure out what this does
             for i in range(len(cfg.tasks)):
                 self._action_masks[i, :cfg.action_dims[i]] = 1.
@@ -148,12 +148,12 @@ class WorldModel(nn.Module):
         """
 
         # TODO: Figure this out why does it predict the Gaussian distribution rather than predict it directly
-        if self.cfg.mulittask:
+        if self.cfg.multitask:
             z = self.task_emb(z, task)
 
         # Gaussian policy prior 
         mean, log_std = self._pi(z).chunk(2, dim=-1)
-        log_std = math.log_std(log_std, self.log_std_min, self.log_std_dif)
+        log_std = math.log_std(log_std, self.log_std_min, self.log_std_def)
         eps = torch.randn_like(mean)
 
         if self.cfg.multitask: # mask out unused action dimensions 
@@ -183,7 +183,7 @@ class WorldModel(nn.Module):
         })
         return action, info
 
-    def Q(self, z, a, task, return_type="min", terget=False, detach=False):
+    def Q(self, z, a, task, return_type="min", target=False, detach=False):
         """
         Predict state-action value.
         'return_type' can be one of the following: ['min', 'avg', 'all']:
@@ -210,7 +210,7 @@ class WorldModel(nn.Module):
         if return_type == 'all':
             return out
         
-        qidx = torch.randper(self.cfg.num_q, device=out.device)[:2]
+        qidx = torch.randperm(self.cfg.num_q, device=out.device)[:2]
         Q = math.two_hot_inv(out[qidx], self.cfg)
         if return_type == 'min':
             return Q.min(0).values 
