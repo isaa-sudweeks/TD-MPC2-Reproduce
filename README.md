@@ -41,3 +41,11 @@ python train.py -optuna \
   optuna.n_jobs=16 \
   optimize_metric=episode_reward
 ```
+
+To sync offline Weights & Biases runs from a login node while Optuna workers are still writing them:
+
+```bash
+bash scripts/sync_wandb_offline.sh
+```
+
+By default this watches `logs/hydra/multirun`, polls every 60 seconds, and re-syncs a run only when its files have changed since the previous successful sync. You can stop it with `Ctrl+C`.
