@@ -1,4 +1,5 @@
 import datetime
+import json
 import time
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
@@ -51,10 +52,21 @@ def _load_cfg(overrides):
     return cfg
 
 
+def _study_root(cfg):
+    return (
+        Path.cwd()
+        / "logs"
+        / "optuna"
+        / str(cfg.task)
+        / str(cfg.exp_name)
+        / str(cfg.optuna.study_name)
+    )
+
+
 def _study_storage(cfg):
     if cfg.optuna.storage not in {None, "null"}:
         return cfg.optuna.storage
-    storage_path = Path(cfg.hydra.sweep.dir) / "optuna_journal.log"
+    storage_path = _study_root(cfg) / "optuna_journal.log"
     storage_path.parent.mkdir(parents=True, exist_ok=True)
     return optuna.storages.JournalStorage(
         optuna.storages.journal.JournalFileBackend(str(storage_path))
@@ -162,6 +174,57 @@ class OptunaWorker:
                 return
 
 
+def _write_launch_manifest(cfg, study, storage, futures):
+    study_root = _study_root(cfg)
+    study_root.mkdir(parents=True, exist_ok=True)
+    manifest_path = study_root / "latest_launch.json"
+    payload = {
+        "study_name": study.study_name,
+        "storage": str(storage),
+        "task": str(cfg.task),
+        "exp_name": str(cfg.exp_name),
+        "target_trials": int(cfg.optuna.n_trials),
+        "n_jobs": int(cfg.optuna.n_jobs),
+        "hydra_sweep_dir": str(cfg.hydra.sweep.dir),
+        "submitted_at": datetime.datetime.now().isoformat(),
+        "jobs": [
+            {
+                "job_id": getattr(job, "job_id", None),
+            }
+            for job in futures
+        ],
+    }
+    manifest_path.write_text(json.dumps(payload, indent=2) + "\n")
+    return manifest_path
+
+
+def _wait_for_workers(cfg, study, futures):
+    while True:
+        terminal_trials = study.get_trials(deepcopy=False, states=TERMINAL_STATES)
+        if len(terminal_trials) >= cfg.optuna.n_trials:
+            break
+        if all(job.done() for job in futures):
+            break
+        time.sleep(cfg.optuna.poll_interval_sec)
+
+    for job in futures:
+        job.result()
+
+    completed_trials = study.get_trials(deepcopy=False, states=(TrialState.COMPLETE,))
+    pruned_trials = study.get_trials(deepcopy=False, states=(TrialState.PRUNED,))
+    failed_trials = study.get_trials(deepcopy=False, states=(TrialState.FAIL,))
+    print(
+        f"Study finished with {len(completed_trials)} complete, "
+        f"{len(pruned_trials)} pruned, {len(failed_trials)} failed trials."
+    )
+    if not completed_trials:
+        raise RuntimeError("Optuna study finished without any completed trials.")
+    best_trial = study.best_trial
+    print(f"Best trial: #{best_trial.number}")
+    print(f"Best value: {best_trial.value}")
+    print(f"Best params: {best_trial.params}")
+
+
 def run_multirun(overrides):
     cfg = _load_cfg(overrides)
     storage = _study_storage(cfg)
@@ -188,32 +251,22 @@ def run_multirun(overrides):
     )
 
     futures = [executor.submit(OptunaWorker(cfg)) for _ in range(cfg.optuna.n_jobs)]
+    manifest_path = _write_launch_manifest(cfg, study, storage, futures)
     print(
         f"Launched {len(futures)} Slurm Optuna workers for study '{study.study_name}'. "
         f"Target trials: {cfg.optuna.n_trials}. Storage: {storage}"
     )
-
-    while True:
-        terminal_trials = study.get_trials(deepcopy=False, states=TERMINAL_STATES)
-        if len(terminal_trials) >= cfg.optuna.n_trials:
-            break
-        if all(job.done() for job in futures):
-            break
-        time.sleep(cfg.optuna.poll_interval_sec)
-
-    for job in futures:
-        job.result()
-
-    completed_trials = study.get_trials(deepcopy=False, states=(TrialState.COMPLETE,))
-    pruned_trials = study.get_trials(deepcopy=False, states=(TrialState.PRUNED,))
-    failed_trials = study.get_trials(deepcopy=False, states=(TrialState.FAIL,))
     print(
-        f"Study finished with {len(completed_trials)} complete, "
-        f"{len(pruned_trials)} pruned, {len(failed_trials)} failed trials."
+        "Submitted job ids:",
+        ", ".join(str(job.job_id) for job in futures),
     )
-    if not completed_trials:
-        raise RuntimeError("Optuna study finished without any completed trials.")
-    best_trial = study.best_trial
-    print(f"Best trial: #{best_trial.number}")
-    print(f"Best value: {best_trial.value}")
-    print(f"Best params: {best_trial.params}")
+    print(f"Launch manifest: {manifest_path}")
+
+    if not cfg.optuna.wait_for_completion:
+        print(
+            "Detached submission mode is enabled. The launcher can exit now without "
+            "affecting already-submitted Slurm workers."
+        )
+        return
+
+    _wait_for_workers(cfg, study, futures)

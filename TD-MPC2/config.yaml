@@ -95,6 +95,7 @@ optuna:
   n_jobs: 8
   max_worker_trials: 0
   poll_interval_sec: 30
+  wait_for_completion: false
   sampler:
     type: tpe
     seed: ${seed}
