@@ -1,3 +1,7 @@
+# Install PyTorch from the CUDA 12.8 wheel index.
+--extra-index-url https://download.pytorch.org/whl/cu128
+
+torch
 dm_control
 stable-baselines3
 gymnasium[box2d]
