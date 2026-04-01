@@ -29,6 +29,8 @@ python train.py -optuna task=mujoco-walker exp_name=optuna-search
 
 This uses the custom Optuna runner plus Slurm workers launched through `submitit`. Each worker owns real Optuna trials backed by shared study storage, reports intermediate evaluation metrics during training, and can prune weak trials early.
 
+By default the Optuna study uses file-backed `JournalStorage` in the sweep directory, which is a better fit than SQLite for distributed runs over a shared filesystem.
+
 Useful overrides:
 
 ```bash

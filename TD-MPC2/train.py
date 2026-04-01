@@ -64,6 +64,7 @@ def run_training(cfg, trial=None):
     except Exception:
         if trial is not None:
             cfg.optuna_trial_state = "failed"
+        trainer.logger.finish()
         raise
     finally:
         env.close()

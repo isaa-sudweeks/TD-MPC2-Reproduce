@@ -29,16 +29,18 @@ def _load_cfg(overrides):
         runtime_cwd / "logs" / "hydra" / "multirun" / str(cfg.task) / str(cfg.exp_name)
         / timestamp.strftime("%Y-%m-%d") / timestamp.strftime("%H-%M-%S")
     )
-    cfg.hydra.sweep.subdir = "${hydra.job.num}"
+    cfg.hydra.sweep.subdir = "optuna"
     return cfg
 
 
 def _study_storage(cfg):
     if cfg.optuna.storage not in {None, "null"}:
         return cfg.optuna.storage
-    storage_path = Path(cfg.hydra.sweep.dir) / "optuna_study.db"
+    storage_path = Path(cfg.hydra.sweep.dir) / "optuna_journal.log"
     storage_path.parent.mkdir(parents=True, exist_ok=True)
-    return f"sqlite:///{storage_path}"
+    return optuna.storages.JournalStorage(
+        optuna.storages.journal.JournalFileBackend(str(storage_path))
+    )
 
 
 def _make_sampler(cfg):
@@ -135,7 +137,7 @@ class OptunaWorker:
                 lambda trial: _objective(cfg, trial),
                 n_trials=1,
                 callbacks=callbacks,
-                catch=(RuntimeError,),
+                catch=(Exception,),
             )
             completed += 1
             if cfg.optuna.max_worker_trials and completed >= cfg.optuna.max_worker_trials:
