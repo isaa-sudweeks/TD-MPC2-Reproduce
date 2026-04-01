@@ -96,6 +96,7 @@ class OnlineTrainer(Trainer):
                     eval_metrics = self.eval()
                     eval_metrics.update(self.common_metrics())
                     self.logger.log(eval_metrics, 'eval')
+                    self.update_best_eval_metrics(eval_metrics)
                     eval_next = False
                 if self._step > 0:
                     train_metrics.update(
@@ -132,6 +133,7 @@ class OnlineTrainer(Trainer):
 
             self._step += 1
         self.logger.finish(self.agent)
+        return self._best_eval_metrics
                     
 
                     

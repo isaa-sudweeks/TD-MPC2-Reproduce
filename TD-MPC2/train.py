@@ -56,7 +56,13 @@ def train(cfg):
 
     try:
         trainer.train()
+        objective_value, objective_metric = trainer.best_objective()
+        print(
+            colored("Optimization objective:", "cyan", attrs=["bold"]),
+            f"{objective_metric}={objective_value:.6f}",
+        )
         print(colored('Training completed!', 'green', attrs=['bold']))
+        return objective_value
     finally:
         env.close()
 

@@ -14,3 +14,5 @@ torchrl
 termcolor
 submitit
 hydra-submitit-launcher
+optuna
+hydra-optuna-sweeper

@@ -95,8 +95,10 @@ class OfflineTrainer(Trainer):
                 if i % self.cfg.eval_freq == 0:
                     metrics.update(self.eval())
                     self.logger.pprint_multitask(metrics, self.cfg)
+                    self.update_best_eval_metrics(metrics)
                     if i > 0:
                         self.logger.save_agent(self.agent, identifier=f'{i}')
                     self.logger.log(metrics, 'pretrain')
         self.logger.finish(self.agent)
+        return self._best_eval_metrics
         
