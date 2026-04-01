@@ -62,20 +62,21 @@ class OnlineTrainer(Trainer):
         Creates a TensorDict for a new episode.
         """
         if isinstance(obs, dict):
-            obs = TensorDict(obs, batch_size=(), device='cpu')
+            obs = TensorDict(obs, batch_size=(), device='cpu').unsqueeze(0)
         else:
             obs = obs.unsqueeze(0).cpu()
         if action is None:
             action = torch.full_like(self.env.rand_act(), float('nan'))
         if reward is None:
             reward = torch.tensor(float('nan'))
-        if termination is None:
+        if terminated is None:
             terminated = torch.tensor(float('nan'))
         td = TensorDict(
             obs=obs,
             action = action.unsqueeze(0),
             reward = reward.unsqueeze(0),
             terminated = terminated.unsqueeze(0),
+            batch_size=(1,),
         )
         return td
 
@@ -97,12 +98,10 @@ class OnlineTrainer(Trainer):
                     self.logger.log(eval_metrics, 'eval')
                     eval_next = False
                 if self._step > 0:
-                    if info['terminated'] and not self.cfg.episodic:
-                        raise ValueError('Episode terminated but not in episodic mode.')
                     train_metrics.update(
                         episode_reward=torch.tensor([td['reward'] for td in self._tds[1:]]).sum(),
                         episode_success = info['success'],
-                        episode_length = len(slef._tds),
+                        episode_length = len(self._tds),
                         episode_terminated=info['terminated'])
                     train_metrics.update(self.common_metrics())
                     self.logger.log(train_metrics, 'train')
@@ -116,8 +115,9 @@ class OnlineTrainer(Trainer):
                 action = self.agent.act(obs, t0=len(self._tds)==1)
             else:
                 action = self.env.rand_act()
-            obs, rewards, done, info = self.env.step(action)
-            self._tds.append(self.to_td(obs, action, reward, info['terminated']))
+            obs, reward, done, info = self.env.step(action)
+            terminated = info['terminated'] if self.cfg.episodic else torch.tensor(0.0)
+            self._tds.append(self.to_td(obs, action, reward, terminated))
 
             # Update agent 
             if self._step >= self.cfg.seed_steps:

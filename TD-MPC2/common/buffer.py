@@ -88,7 +88,7 @@ class Buffer():
         """
         Add an episode to the buffer
         """
-        td['Episode'] = torch.full_like(td['reward'], self._num_eps, dtype=torch.int64)
+        td['episode'] = torch.full_like(td['reward'], self._num_eps, dtype=torch.int64)
         if self._num_eps == 0:
             self._buffer = self._init(td)
         self._buffer.extend(td)
@@ -100,7 +100,7 @@ class Buffer():
         Prepare a batch of data for training.
         Expects 'td' to be a TensorDict with batch size TxB
         """
-        td = td.select("obs", "action", "reward", "termination", "task", strict=False).to(self._device, non_blocking=True)
+        td = td.select("obs", "action", "reward", "terminated", "task", strict=False).to(self._device, non_blocking=True)
         obs = td.get('obs').contiguous()
         action = td.get('action')[1:].contiguous()
         reward = td.get('reward')[1:].unsqueeze(-1).contiguous()

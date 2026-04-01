@@ -45,16 +45,20 @@ def train(cfg):
     print(colored('Work dir:', 'yellow', attrs=['bold']), cfg.work_dir)
 
     trainer_clf = OfflineTrainer if cfg.multitask else OnlineTrainer
+    env = make_env(cfg)
     trainer = trainer_clf(
         cfg = cfg,
-        env = make_env(cfg), # I need to make this 
+        env = env, # I need to make this 
         agent=TDMPC2(cfg),
         logger=Logger(cfg),
         buffer=Buffer(cfg)
     )
 
-    trainer.train()
-    print(colored('Training completed!', 'green', attrs=['bold']))
+    try:
+        trainer.train()
+        print(colored('Training completed!', 'green', attrs=['bold']))
+    finally:
+        env.close()
 
 if __name__ == '__main__':
     train()

@@ -41,18 +41,16 @@ class TDMPC2(torch.nn.Module):
         print('Discount factor:', self.discount)
         self.register_buffer("_prev_mean", torch.zeros(self.cfg.horizon, self.cfg.action_dim, device=self.device))
         if cfg.compile:
-            print('Compiling update function with torch.compile...')
-            self._update = torch.compile(self._update, mode="reduce-overhead")
+            print('Skipping torch.compile for update: Inductor is unstable on this workload.')
     #TODO: Yeah dont know what is happening here 
     @property
     def plan(self):
         _plan_val = getattr(self, "_plan_val", None)
         if _plan_val is not None:
             return _plan_val 
-        if self.cfg.compile:
-            plan = torch.compile(self._plan, mode="reduce-overhead")
-        else:
-            plan = self._plan 
+        # Keep planning eager: torch.compile on the planner is currently
+        # unstable with the dynamic MPPI path used during evaluation.
+        plan = self._plan 
         self._plan_val = plan 
         return self._plan_val
     

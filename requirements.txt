@@ -8,7 +8,7 @@ gymnasium[box2d]
 gymnasium[mujoco]
 shimmy[dm-control]
 hydra-core
-wandb
+wandb[media]
 tensorboard
 torchrl
 termcolor

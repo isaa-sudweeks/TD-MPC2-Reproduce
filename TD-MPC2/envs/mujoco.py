@@ -58,10 +58,11 @@ def make_env(cfg):
     if not cfg.task in MUJOCO_TASKS:
         raise ValueError(f'Task {cfg.task} not found in MuJoCo tasks')
     assert cfg.obs == 'state', 'MuJoCo envs only support state observations' 
+    render_mode = 'rgb_array' if cfg.save_video else None
     if cfg. task == 'lunarlander-continuous':
-        env = gym.make(MUJOCO_TASKS[cfg.task], continuous=True, render_mode='rgb_array')
+        env = gym.make(MUJOCO_TASKS[cfg.task], continuous=True, render_mode=render_mode)
     else:
-        env = gym.make(MUJOCO_TASKS[cfg.task], render_mode='rgb_array')
+        env = gym.make(MUJOCO_TASKS[cfg.task], render_mode=render_mode)
     env = MuJoCoWrapper(env, cfg)
     env = Timeout(env, max_episode_steps={
         'lunarlander-continuous': 500,
