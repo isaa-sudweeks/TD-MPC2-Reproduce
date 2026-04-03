@@ -134,6 +134,19 @@ save_video: true
 save_agent: true
 seed: 1
 
+# custom MuJoCo task defaults
+xml_path: TD-MPC2/envs/truss/assets/Baseline/2d_pyramid_velocity_integrated_ctr.xml
+max_steps: 1000
+nsubsteps: 5
+speed: 0.05
+forward_weight: 5.0
+energy_weight: 0.005
+alive_bonus: 0.1
+rigidity_weight: 0.5
+slip_weight: 0.1
+critical_eig_threshold: 0.03
+slip_height: 0.2
+
 # convenience
 work_dir: ???
 task_title: ???

@@ -1,7 +1,9 @@
 import numpy as np 
 import gymnasium as gym 
-from envs.wrappers.timeout import Timeout 
+from envs.wrappers.timeout import Timeout
 
+
+import envs.truss.velocity_command_env
 
 # How to add my own custom task
 # Step 1: Add the class task definition to the tasks folder 
@@ -19,8 +21,11 @@ MUJOCO_TASKS = {
     'mujoco-halfcheetah': 'HalfCheetah-v4',
     'bipedal-walker': 'BipedalWalker-v3',
     'lunarlander-continuous' : 'LunarLander-v2',
+    'truss-velocity-command': 'MujocoVelocityCommandEnv-v0',
     
 }
+
+CUSTOM_MUJOCO_TASKS = {'truss-velocity-command'}
 
 class MuJoCoWrapper(gym.Wrapper):
     def __init__(self, env, cfg):
@@ -59,14 +64,18 @@ def make_env(cfg):
         raise ValueError(f'Task {cfg.task} not found in MuJoCo tasks')
     assert cfg.obs == 'state', 'MuJoCo envs only support state observations' 
     render_mode = 'rgb_array' if cfg.save_video else None
+    env_kwargs = {'render_mode': render_mode}
+    if cfg.task in CUSTOM_MUJOCO_TASKS:
+        env_kwargs['config'] = cfg
     if cfg. task == 'lunarlander-continuous':
-        env = gym.make(MUJOCO_TASKS[cfg.task], continuous=True, render_mode=render_mode)
+        env = gym.make(MUJOCO_TASKS[cfg.task], continuous=True, **env_kwargs)
     else:
-        env = gym.make(MUJOCO_TASKS[cfg.task], render_mode=render_mode)
+        env = gym.make(MUJOCO_TASKS[cfg.task], **env_kwargs)
     env = MuJoCoWrapper(env, cfg)
     env = Timeout(env, max_episode_steps={
         'lunarlander-continuous': 500,
         'bipedal-walker': 1600,
+        'truss-velocity-command': cfg.max_steps,
     }.get(cfg.task, 1000))
     cfg.discount_max = 0.99 
     cfg.rho = 0.7 # Increase this for tasks that are episodic #TODO
