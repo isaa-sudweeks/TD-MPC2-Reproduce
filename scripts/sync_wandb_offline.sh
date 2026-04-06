@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+#Change this so that it only syncs the file if it hasn't synced it in the past or the run isn't finished for example it shouldn't keep syncing even when the run is finished and hasn't changed at all.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
