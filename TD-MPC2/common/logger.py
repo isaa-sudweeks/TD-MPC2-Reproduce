@@ -238,25 +238,35 @@ class Logger:
 			if '+' not in k:
 				continue
 			task = k.split('+')[1]
-			if task in TASK_SET['mt30'] and k.startswith('episode_reward'): # DMControl
+			if k.startswith('episode_reward'):
+				print(colored(f'  {task:<32}\tR: {v:.01f}', 'yellow'))
+			elif k.startswith('episode_success'):
+				print(colored(f'  {task:<32}\tS: {v:.02f}', 'yellow'))
+		
+		# DMControl and Meta-World specific aggregation:
+		for k, v in d.items():
+			if '+' not in k:
+				continue
+			task = k.split('+')[1]
+			if task in TASK_SET.get('mt30', []) and k.startswith('episode_reward'):
 				dmcontrol_reward.append(v)
-				print(colored(f'  {task:<22}\tR: {v:.01f}', 'yellow'))
-			elif task in TASK_SET['mt80'] and task not in TASK_SET['mt30']: # Meta-World
+			elif task in TASK_SET.get('mt80', []) and task not in TASK_SET.get('mt30', []):
 				if k.startswith('episode_reward'):
 					metaworld_reward.append(v)
 				elif k.startswith('episode_success'):
 					metaworld_success.append(v)
-					print(colored(f'  {task:<22}\tS: {v:.02f}', 'yellow'))
-		dmcontrol_reward = np.nanmean(dmcontrol_reward)
-		d['episode_reward+avg_dmcontrol'] = dmcontrol_reward
-		print(colored(f'  {"dmcontrol":<22}\tR: {dmcontrol_reward:.01f}', 'yellow', attrs=['bold']))
-		if cfg.task == 'mt80':
+		
+		if dmcontrol_reward:
+			dmcontrol_reward = np.nanmean(dmcontrol_reward)
+			d['episode_reward+avg_dmcontrol'] = dmcontrol_reward
+			print(colored(f'  {"dmcontrol":<32}\tR: {dmcontrol_reward:.01f}', 'yellow', attrs=['bold']))
+		if metaworld_reward:
 			metaworld_reward = np.nanmean(metaworld_reward)
 			metaworld_success = np.nanmean(metaworld_success)
 			d['episode_reward+avg_metaworld'] = metaworld_reward
 			d['episode_success+avg_metaworld'] = metaworld_success
-			print(colored(f'  {"metaworld":<22}\tR: {metaworld_reward:.01f}', 'yellow', attrs=['bold']))
-			print(colored(f'  {"metaworld":<22}\tS: {metaworld_success:.02f}', 'yellow', attrs=['bold']))
+			print(colored(f'  {"metaworld":<32}\tR: {metaworld_reward:.01f}', 'yellow', attrs=['bold']))
+			print(colored(f'  {"metaworld":<32}\tS: {metaworld_success:.02f}', 'yellow', attrs=['bold']))
 
 	def log(self, d, category="train"):
 		assert category in CAT_TO_COLOR.keys(), f"invalid category: {category}"

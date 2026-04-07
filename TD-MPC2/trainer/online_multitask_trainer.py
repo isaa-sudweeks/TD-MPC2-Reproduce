@@ -90,13 +90,16 @@ class OnlineMultitaskTrainer(Trainer):
                     self.report_eval_metrics(eval_metrics, self._step)
                     eval_next = False
                 if self._step > 0:
-                    train_metrics.update(
-                        episode_reward=torch.tensor([td['reward'] for td in self._tds[1:]]).sum(),
-                        episode_success = info['success'],
-                        episode_length = len(self._tds),
-                        episode_terminated=info['terminated'])
-                    train_metrics.update(self.common_metrics())
-                    self.logger.log(train_metrics, 'train')
+                    log_metrics = train_metrics.copy()
+                    log_metrics.update({
+                        f'episode_reward+{self.cfg.tasks[task_idx]}': torch.tensor([td['reward'] for td in self._tds[1:]]).sum(),
+                        f'episode_success+{self.cfg.tasks[task_idx]}': info['success'],
+                        f'episode_length+{self.cfg.tasks[task_idx]}': len(self._tds),
+                        f'episode_terminated+{self.cfg.tasks[task_idx]}': info['terminated']
+                    })
+                    log_metrics.update(self.common_metrics())
+                    self.logger.log(log_metrics, 'train')
+                    train_metrics = {}
                     self._ep_idx = self.buffer.add(torch.cat(self._tds))
 
                 task_idx = np.random.randint(len(self.cfg.tasks))
