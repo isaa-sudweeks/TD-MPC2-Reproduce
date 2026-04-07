@@ -69,11 +69,11 @@ def make_env(cfg):
                 cfg.obs_shapes.append({k: v.shape for k, v in e.observation_space.spaces.items()})
             except:
                 cfg.obs_shapes.append({cfg.get('obs', 'state'): e.observation_space.shape})
-            cfg.action_dims.append(e.action_space.shape[0])
-            cfg.episode_lengths.append(_max_episode_steps(e))
-        cfg.action_dim = max(cfg.action_dims)
-        cfg.episode_length = max(cfg.episode_lengths)
-        cfg.seed_steps = max(1000, 5*cfg.episode_length)
+            cfg.action_dims.append(int(e.action_space.shape[0]))
+            cfg.episode_lengths.append(int(_max_episode_steps(e)))
+        cfg.action_dim = int(max(cfg.action_dims))
+        cfg.episode_length = int(max(cfg.episode_lengths))
+        cfg.seed_steps = int(max(1000, 5*cfg.episode_length))
         cfg.obs_shape = {}
         for shape_dict in cfg.obs_shapes:
             for k, v in shape_dict.items():

@@ -46,6 +46,9 @@ def parse_cfg(cfg: OmegaConf) -> OmegaConf:
 		try:
 			v = cfg[k]
 			if isinstance(v, str):
+				if v.replace('_', '').isdigit():
+					cfg[k] = int(v.replace('_', ''))
+					continue
 				match = re.match(r"(\d+)([+\-*/])(\d+)", v)
 				if match:
 					cfg[k] = eval(match.group(1) + match.group(2) + match.group(3))

@@ -126,7 +126,7 @@ class TDMPC2(torch.nn.Module):
         """
         G, discount = 0, 1
         termination = torch.zeros(self.cfg.num_samples, 1, dtype=torch.float32, device=z.device)
-        for t in range(self.cfg.horizon):
+        for t in range(int(self.cfg.horizon)):
             reward = math.two_hot_inv(self.model.reward(z, actions[t], task), self.cfg)
             z = self.model.next(z, actions[t], task)
             G = G + discount * (1-termination) * reward
@@ -157,7 +157,7 @@ class TDMPC2(torch.nn.Module):
         if self.cfg.num_pi_trajs > 0:
             pi_actions = torch.empty(self.cfg.horizon, self.cfg.num_pi_trajs, self.cfg.action_dim, device=self.device)
             _z = z.repeat(self.cfg.num_pi_trajs, 1)
-            for t in range(self.cfg.horizon-1):
+            for t in range(int(self.cfg.horizon-1)):
                 pi_actions[t], _ = self.model.pi(_z, task)
                 _z = self.model.next(_z, pi_actions[t], task) # TODO: I don't really remember what this does
             pi_actions[-1], _ = self.model.pi(_z, task)
@@ -173,7 +173,7 @@ class TDMPC2(torch.nn.Module):
             actions[:, :self.cfg.num_pi_trajs] = pi_actions 
         
         # Iterate MPPI 
-        for _ in range(self.cfg.iterations):
+        for _ in range(int(self.cfg.iterations)):
 
             # Sample actions 
             r = torch.randn(self.cfg.horizon, self.cfg.num_samples - self.cfg.num_pi_trajs, self.cfg.action_dim, device=std.device)

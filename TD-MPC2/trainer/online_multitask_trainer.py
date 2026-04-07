@@ -29,7 +29,7 @@ class OnlineMultitaskTrainer(Trainer):
         results = dict()
         for task_idx in tqdm(range(len(self.cfg.tasks)), desc="Evaluating"):
             ep_rewards, ep_successes, ep_lengths = [], [], []
-            for i in range(self.cfg.eval_episodes):
+            for i in range(int(self.cfg.eval_episodes)):
                 obs, done, ep_reward, t = self.env.reset(task_idx=task_idx), False, 0, 0
                 if self.cfg.save_video:
                     self.logger.video.init(self.env, enabled=(i==0))
@@ -117,7 +117,7 @@ class OnlineMultitaskTrainer(Trainer):
                     print('Pretraining agent on seed data...')
                 else:
                     num_updates = 1
-                for _ in range(num_updates):
+                for _ in range(int(num_updates)):
                     _train_metrics = self.agent.update(self.buffer)
                 train_metrics.update(_train_metrics)
 
