@@ -26,6 +26,7 @@ from envs import make_env
 from tdmpc2 import TDMPC2
 from trainer.offline_trainer import OfflineTrainer
 from trainer.online_trainer import OnlineTrainer
+from trainer.online_multitask_trainer import OnlineMultitaskTrainer
 from common.logger import Logger
 
 torch.backends.cudnn.benchmark = True 
@@ -42,7 +43,10 @@ def run_training(cfg, trial=None):
 
     print(colored('Work dir:', 'yellow', attrs=['bold']), cfg.work_dir)
 
-    trainer_clf = OfflineTrainer if cfg.multitask else OnlineTrainer
+    if cfg.multitask:
+        trainer_clf = OfflineTrainer if cfg.task in {'mt30', 'mt80'} else OnlineMultitaskTrainer
+    else:
+        trainer_clf = OnlineTrainer
     env = make_env(cfg)
     trainer = trainer_clf(
         cfg = cfg,

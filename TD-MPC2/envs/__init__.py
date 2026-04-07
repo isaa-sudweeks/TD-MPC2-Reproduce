@@ -55,10 +55,12 @@ def make_env(cfg):
         gym.logger.set_level(40)
     else:
         gym.logger.min_level = 40
+    env = None 
     if cfg.multitask:
-        raise NotImplementedError("Multitask envs not implemented yet")
+        from envs.wrappers.multitask import MultitaskWrapper
+        env = MultitaskWrapper(cfg, [make_dm_control_env, make_maniskill_env, make_metaworld_env, make_myosuite_env, make_mujoco_env])
+        episode_length = _max_episode_steps(env.envs[0])
     else:
-        env = None 
         for fn in [make_dm_control_env, make_maniskill_env, make_metaworld_env, make_myosuite_env, make_mujoco_env]:
             try:
                 env = fn(cfg)
