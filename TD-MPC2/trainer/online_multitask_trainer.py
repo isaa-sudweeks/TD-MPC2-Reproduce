@@ -119,7 +119,8 @@ class OnlineMultitaskTrainer(Trainer):
         else:
             obs = obs.unsqueeze(0).cpu()
         if action is None:
-            action = torch.full_like(self.env.rand_act(), float('nan'))
+            env_idx = task_idx if task_idx is not None else 0
+            action = torch.full_like(self.env.envs[env_idx].rand_act(), float('nan'))
         if reward is None:
             reward = torch.tensor(float('nan'))
         if terminated is None:
@@ -190,8 +191,7 @@ class OnlineMultitaskTrainer(Trainer):
                         action = self.agent.act(obs_list[i], t0=(len(tds_list[i])==1), task=i)
                         prev_means[i].copy_(self.agent._prev_mean)
                     else:
-                        self.env.active_env_idx = i
-                        action = self.env.rand_act()
+                        action = self.env.envs[i].rand_act()
                     actions.append(action)
                 
                 # Step environments concurrently via ThreadPoolExecutor
