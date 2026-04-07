@@ -19,14 +19,14 @@ hydra:
 
 
 # environment
-task: truss-velocity-command-right
+task: truss-velocity-command
 obs: state
 episodic: true
 
 # evaluation
 checkpoint: ???
 eval_episodes: 10
-eval_freq: 50_000
+eval_freq: 25_000
 
 # training
 steps: 1_000_000
@@ -142,8 +142,8 @@ seed: 1
 
 # custom MuJoCo task defaults
 xml_path: TD-MPC2/envs/truss/assets/Baseline/octahedron_velocity_integrated_ctr.xml
-max_steps: 1000
-nsubsteps: 5
+max_steps: 5000
+nsubsteps: 10
 speed: 0.05
 forward_weight: 5.0
 energy_weight: 0.005
