@@ -46,7 +46,7 @@ class OnlineMultitaskTrainer(Trainer):
                 ep_successes.append(info['success'])
                 ep_lengths.append(t)
                 if self.cfg.save_video:
-                    self.logger.video.save(f'{self._step}_{self.cfg.tasks[task_idx]}')
+                    self.logger.video.save(self._step, key=f'videos/eval_video_{self.cfg.tasks[task_idx]}')
             results.update({
                 f'episode_reward+{self.cfg.tasks[task_idx]}' : np.nanmean(ep_rewards),
                 f'episode_success+{self.cfg.tasks[task_idx]}' : np.nanmean(ep_successes),
