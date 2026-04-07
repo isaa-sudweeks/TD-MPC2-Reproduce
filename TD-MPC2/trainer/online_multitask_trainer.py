@@ -51,6 +51,11 @@ class OnlineMultitaskTrainer(Trainer):
                 f'episode_reward+{self.cfg.tasks[task_idx]}' : np.nanmean(ep_rewards),
                 f'episode_success+{self.cfg.tasks[task_idx]}' : np.nanmean(ep_successes),
             })
+        
+        if len(self.cfg.tasks) > 0:
+            results['episode_reward'] = np.nanmean([results[f'episode_reward+{self.cfg.tasks[i]}'] for i in range(len(self.cfg.tasks))])
+            results['episode_success'] = np.nanmean([results[f'episode_success+{self.cfg.tasks[i]}'] for i in range(len(self.cfg.tasks))])
+        
         return results
     
     def to_td(self, obs, action=None, reward=None, terminated=None, task_idx=None):
@@ -91,11 +96,14 @@ class OnlineMultitaskTrainer(Trainer):
                     eval_next = False
                 if self._step > 0:
                     log_metrics = train_metrics.copy()
+                    ep_reward = torch.tensor([td['reward'] for td in self._tds[1:]]).sum()
                     log_metrics.update({
-                        f'episode_reward+{self.cfg.tasks[task_idx]}': torch.tensor([td['reward'] for td in self._tds[1:]]).sum(),
+                        f'episode_reward+{self.cfg.tasks[task_idx]}': ep_reward,
                         f'episode_success+{self.cfg.tasks[task_idx]}': info['success'],
                         f'episode_length+{self.cfg.tasks[task_idx]}': len(self._tds),
-                        f'episode_terminated+{self.cfg.tasks[task_idx]}': info['terminated']
+                        f'episode_terminated+{self.cfg.tasks[task_idx]}': info['terminated'],
+                        'episode_reward': ep_reward,
+                        'episode_success': info['success'],
                     })
                     log_metrics.update(self.common_metrics())
                     self.logger.log(log_metrics, 'train')
