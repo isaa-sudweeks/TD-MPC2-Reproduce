@@ -8,8 +8,9 @@ class RunningScale(torch.nn.Module):
 	def __init__(self, cfg):
 		super().__init__()
 		self.cfg = cfg
-		self.value = Buffer(torch.ones(1, dtype=torch.float32, device=torch.device('cuda:0')))
-		self._percentiles = Buffer(torch.tensor([5, 95], dtype=torch.float32, device=torch.device('cuda:0')))
+		device = torch.device(getattr(cfg, 'device', 'cuda'))
+		self.value = Buffer(torch.ones(1, dtype=torch.float32, device=device))
+		self._percentiles = Buffer(torch.tensor([5, 95], dtype=torch.float32, device=device))
 
 	def state_dict(self):
 		return dict(value=self.value, percentiles=self._percentiles)

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-#Change this so that it only syncs the file if it hasn't synced it in the past or the run isn't finished for example it shouldn't keep syncing even when the run is finished and hasn't changed at all.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -119,7 +118,7 @@ while true; do
     previous_mtime="${LAST_SYNCED_MTIME[${run_dir}]:-}"
     if [[ "${current_mtime}" != "${previous_mtime}" ]]; then
       if sync_run "${run_dir}"; then
-        LAST_SYNCED_MTIME["${run_dir}"]="${current_mtime}"
+        LAST_SYNCED_MTIME["${run_dir}"]="$(latest_mtime "${run_dir}")"
         save_state
       else
         echo "[$(date '+%F %T')] sync failed for ${run_dir}" >&2

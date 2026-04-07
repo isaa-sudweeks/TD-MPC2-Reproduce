@@ -22,7 +22,8 @@ def evaluate(cfg: dict):
     Script for evaluating a single-task or multi-task TD-MPC2 checkpoint 
     """
     
-    assert torch.cuda.is_available(), "This script requires a GPU."
+    if getattr(cfg, 'device', 'cuda') == 'cuda':
+        assert torch.cuda.is_available(), "CUDA not available, please run on a GPU or set device in config"
     assert cfg.eval_episodes > 0, "Must evaluate at least one episode."
     
     cfg = parse_cfg(cfg)

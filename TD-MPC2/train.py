@@ -36,7 +36,8 @@ def run_training(cfg, trial=None):
     """
     Execute one training run and return the best objective value seen.
     """
-    assert torch.cuda.is_available(), "CUDA not available, please run on a GPU"
+    if getattr(cfg, 'device', 'cuda') == 'cuda':
+        assert torch.cuda.is_available(), "CUDA not available, please run on a GPU"
     assert cfg.steps > 0, "Number of steps must be positive"
     cfg = parse_cfg(cfg)
     set_seed(cfg.seed)

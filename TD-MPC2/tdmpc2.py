@@ -18,7 +18,7 @@ class TDMPC2(torch.nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.device = torch.device('cuda:0')
+        self.device = torch.device(getattr(cfg, 'device', 'cuda'))
         self.model = WorldModel(cfg).to(self.device)
         # I understand this for the most part but I need to figure out the mechanics a bit more
         self.optim = torch.optim.Adam([
@@ -34,7 +34,7 @@ class TDMPC2(torch.nn.Module):
         self.scale = RunningScale(cfg)
         self.cfg.iterations += 2*int(cfg.action_dim >= 20) # Heuristic for large action spaces but TODO: I still don't know what this is doing or why we need this
         self.discount = torch.tensor(
-            [self._get_discount(ep_len) for ep_len in cfg.episode_lengths], device='cuda:0'
+            [self._get_discount(ep_len) for ep_len in cfg.episode_lengths], device=self.device
         ) if self.cfg.multitask else self._get_discount(cfg.episode_length)
 
         print('Episode length:', cfg.episode_length)
@@ -358,7 +358,8 @@ class TDMPC2(torch.nn.Module):
         kwargs = {}
         if task is not None:
             kwargs["task"] = task
-        torch.compiler.cudagraph_mark_step_begin()
+        if self.device.type == 'cuda':
+            torch.compiler.cudagraph_mark_step_begin()
         return self._update(obs, action, reward, terminated, **kwargs)
 
         
