@@ -83,6 +83,7 @@ def make_env(cfg):
                     cfg.obs_shape[k] = [max(a, b) for a, b in zip(cfg.obs_shape[k], v)]
         for k in cfg.obs_shape:
             cfg.obs_shape[k] = tuple(cfg.obs_shape[k])
+        return env
     else:
         for fn in [make_dm_control_env, make_maniskill_env, make_metaworld_env, make_myosuite_env, make_mujoco_env]:
             try:
