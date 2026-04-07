@@ -19,7 +19,7 @@ hydra:
 
 
 # environment
-task: mujoco-walker
+task: truss-velocity-command-right
 obs: state
 episodic: true
 
@@ -141,7 +141,7 @@ save_agent: true
 seed: 1
 
 # custom MuJoCo task defaults
-xml_path: TD-MPC2/envs/truss/assets/Baseline/2d_pyramid_velocity_integrated_ctr.xml
+xml_path: TD-MPC2/envs/truss/assets/Baseline/octahedron_velocity_integrated_ctr.xml
 max_steps: 1000
 nsubsteps: 5
 speed: 0.05
