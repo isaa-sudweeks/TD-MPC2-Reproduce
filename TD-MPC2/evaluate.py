@@ -11,7 +11,7 @@ from termcolor import colored
 
 from common.parser import parse_cfg
 from common.seed import set_seed 
-from envs import make_env # TODO: I haven't implemented this yet
+from envs import make_env 
 from tdmpc2 import TDMPC2 
 
 torch.backends.cudnn.benchmark = True 

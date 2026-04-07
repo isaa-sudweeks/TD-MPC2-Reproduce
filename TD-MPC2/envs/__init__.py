@@ -59,7 +59,30 @@ def make_env(cfg):
     if cfg.multitask:
         from envs.wrappers.multitask import MultitaskWrapper
         env = MultitaskWrapper(cfg, [make_dm_control_env, make_maniskill_env, make_metaworld_env, make_myosuite_env, make_mujoco_env])
-        episode_length = _max_episode_steps(env.envs[0])
+        for i in range(len(env.envs)):
+            env.envs[i] = TensorWrapper(env.envs[i])
+        cfg.obs_shapes = []
+        cfg.action_dims = []
+        cfg.episode_lengths = []
+        for e in env.envs:
+            try:
+                cfg.obs_shapes.append({k: v.shape for k, v in e.observation_space.spaces.items()})
+            except:
+                cfg.obs_shapes.append({cfg.get('obs', 'state'): e.observation_space.shape})
+            cfg.action_dims.append(e.action_space.shape[0])
+            cfg.episode_lengths.append(_max_episode_steps(e))
+        cfg.action_dim = max(cfg.action_dims)
+        cfg.episode_length = max(cfg.episode_lengths)
+        cfg.seed_steps = max(1000, 5*cfg.episode_length)
+        cfg.obs_shape = {}
+        for shape_dict in cfg.obs_shapes:
+            for k, v in shape_dict.items():
+                if k not in cfg.obs_shape:
+                    cfg.obs_shape[k] = list(v)
+                else:
+                    cfg.obs_shape[k] = [max(a, b) for a, b in zip(cfg.obs_shape[k], v)]
+        for k in cfg.obs_shape:
+            cfg.obs_shape[k] = tuple(cfg.obs_shape[k])
     else:
         for fn in [make_dm_control_env, make_maniskill_env, make_metaworld_env, make_myosuite_env, make_mujoco_env]:
             try:
