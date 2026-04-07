@@ -174,7 +174,7 @@ class MujocoTrussEnv(gym.Env):
         if critical_eig < 0.03:
             terminate = True
 
-        foward_vel = self.mj_model.get_forward_velocity()
+        foward_vel = self.mj_model.get_forward_velocity_x()
         energy_penalty = float(np.sum(np.square(action)))
         critical_eig = float(critical_eig)
 

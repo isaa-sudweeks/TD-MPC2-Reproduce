@@ -4,6 +4,9 @@ from envs.wrappers.timeout import Timeout
 
 
 import envs.truss.velocity_command_env
+import envs.truss.velocity_command_env_left
+import envs.truss.velocity_command_env_up
+import envs.truss.velocity_command_env_down
 
 # How to add my own custom task
 # Step 1: Add the class task definition to the tasks folder 
@@ -21,11 +24,19 @@ MUJOCO_TASKS = {
     'mujoco-halfcheetah': 'HalfCheetah-v4',
     'bipedal-walker': 'BipedalWalker-v3',
     'lunarlander-continuous' : 'LunarLander-v2',
-    'truss-velocity-command': 'MujocoVelocityCommandEnv-v0',
+    'truss-velocity-command-right': 'MujocoVelocityCommandEnvRight-v0',
+    'truss-velocity-command-left': 'MujocoVelocityCommandEnvLeft-v0',
+    'truss-velocity-command-up': 'MujocoVelocityCommandEnvUp-v0',
+    'truss-velocity-command-down': 'MujocoVelocityCommandEnvDown-v0',
     
 }
 
-CUSTOM_MUJOCO_TASKS = {'truss-velocity-command'}
+CUSTOM_MUJOCO_TASKS = {
+    'truss-velocity-command-right',
+    'truss-velocity-command-left',
+    'truss-velocity-command-up',
+    'truss-velocity-command-down'
+}
 
 class MuJoCoWrapper(gym.Wrapper):
     def __init__(self, env, cfg):
@@ -75,7 +86,10 @@ def make_env(cfg):
     env = Timeout(env, max_episode_steps={
         'lunarlander-continuous': 500,
         'bipedal-walker': 1600,
-        'truss-velocity-command': cfg.max_steps,
+        'truss-velocity-command-right': cfg.max_steps,
+        'truss-velocity-command-left': cfg.max_steps,
+        'truss-velocity-command-up': cfg.max_steps,
+        'truss-velocity-command-down': cfg.max_steps,
     }.get(cfg.task, 1000))
     cfg.discount_max = 0.99 
     cfg.rho = 0.7 # Increase this for tasks that are episodic #TODO

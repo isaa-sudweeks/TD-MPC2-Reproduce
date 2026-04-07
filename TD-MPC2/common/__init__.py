@@ -23,7 +23,9 @@ MODEL_SIZE = { # parameters (M)
 		  'num_q': 8},
 }
 
+
 TASK_SET = {
+	'truss-velocity-command': ['truss-velocity-command-right', 'truss-velocity-command-left', 'truss-velocity-command-up', 'truss-velocity-command-down'],
 	'mt30': [
 		# 19 original dmcontrol tasks
 		'walker-stand', 'walker-walk', 'walker-run', 'cheetah-run', 'reacher-easy',

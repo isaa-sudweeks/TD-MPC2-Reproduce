@@ -93,7 +93,7 @@ class MujocoRelativeObsEnv(MujocoTrussEnv):
         if critical_eig < self.config.critical_eig_threshold:
             terminate = True
 
-        foward_vel = self.mj_model.get_forward_velocity()
+        foward_vel = self.mj_model.get_forward_velocity_x()
         energy_penalty = float(np.sum(np.square(action)))
         critical_eig = float(critical_eig)
 

@@ -191,9 +191,13 @@ class MujocoModel:
     def collapse_check(self):
         return self._critical_eig() / self.initial_critical_eig
 
-    def get_forward_velocity(self):
+    def get_forward_velocity_x(self):
         linear_velocities = self.get_node_linear_velocity_matrix()
         return float(np.mean(linear_velocities[:, 0]))
+
+    def get_forward_velocity_y(self):
+        linear_velocities = self.get_node_linear_velocity_matrix()
+        return float(np.mean(linear_velocities[:, 1]))
 
     def get_slip_penalty(self, height=0.2):
         positions = self.get_node_position_matrix()

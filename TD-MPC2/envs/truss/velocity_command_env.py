@@ -6,7 +6,7 @@ from envs.truss.relative_observation_env import MujocoRelativeObsEnv
 from gymnasium.envs.registration import register
 
 register(
-    id="MujocoVelocityCommandEnv-v0",
+    id="MujocoVelocityCommandEnvRight-v0",
     entry_point="envs.truss.velocity_command_env:MujocoVelocityCommandEnv",
 )
 
