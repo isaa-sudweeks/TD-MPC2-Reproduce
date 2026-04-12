@@ -139,6 +139,7 @@ compile: true
 save_video: true
 save_agent: true
 seed: 1
+pretrain_steps: 1000
 
 # custom MuJoCo task defaults
 xml_path: TD-MPC2/envs/truss/assets/Baseline/octahedron_velocity_integrated_ctr.xml

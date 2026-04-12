@@ -73,8 +73,6 @@ class MujocoRelativeObsEnv(MujocoTrussEnv):
 
         truncate = self.steps >= self.max_steps
         reward, reward_dict, terminate = self._compute_reward(action)
-        if truncate:
-            terminate = True 
         obs = self._get_obs()
         
         return obs, reward, terminate, truncate, reward_dict

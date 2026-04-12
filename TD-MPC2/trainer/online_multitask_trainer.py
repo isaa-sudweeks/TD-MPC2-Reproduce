@@ -146,6 +146,11 @@ class OnlineMultitaskTrainer(Trainer):
         tds_list = [[] for _ in range(num_tasks)]
         infos_list = [None] * num_tasks
         prev_means = [torch.zeros(self.cfg.horizon, self.cfg.action_dim, device=self.agent.device) for _ in range(num_tasks)]
+        latest_ep_rewards = [np.nan] * num_tasks
+        latest_ep_successes = [np.nan] * num_tasks
+        latest_ep_lengths = [np.nan] * num_tasks
+        latest_ep_terminated = [np.nan] * num_tasks
+        pretrain_steps = int(getattr(self.cfg, 'pretrain_steps', min(self.cfg.seed_steps, 1000)))
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_tasks) as executor:
             while self._step <= self.cfg.steps:
@@ -164,14 +169,24 @@ class OnlineMultitaskTrainer(Trainer):
                         if len(tds_list[i]) > 0:
                             if self._step > 0:
                                 log_metrics = train_metrics.copy()
-                                ep_reward = torch.tensor([td['reward'] for td in tds_list[i][1:]]).sum()
+                                ep_reward = torch.stack([td['reward'] for td in tds_list[i][1:]]).sum()
+                                ep_reward = float(ep_reward.item())
+                                ep_success = float(infos_list[i]['success'])
+                                ep_length = len(tds_list[i])
+                                ep_terminated = float(infos_list[i]['terminated'])
+                                latest_ep_rewards[i] = ep_reward
+                                latest_ep_successes[i] = ep_success
+                                latest_ep_lengths[i] = ep_length
+                                latest_ep_terminated[i] = ep_terminated
                                 log_metrics.update({
                                     f'episode_reward+{self.cfg.tasks[i]}': ep_reward,
-                                    f'episode_success+{self.cfg.tasks[i]}': infos_list[i]['success'],
-                                    f'episode_length+{self.cfg.tasks[i]}': len(tds_list[i]),
-                                    f'episode_terminated+{self.cfg.tasks[i]}': infos_list[i]['terminated'],
-                                    'episode_reward': ep_reward,
-                                    'episode_success': infos_list[i]['success'],
+                                    f'episode_success+{self.cfg.tasks[i]}': ep_success,
+                                    f'episode_length+{self.cfg.tasks[i]}': ep_length,
+                                    f'episode_terminated+{self.cfg.tasks[i]}': ep_terminated,
+                                    'episode_reward': np.nanmean(latest_ep_rewards),
+                                    'episode_success': np.nanmean(latest_ep_successes),
+                                    'episode_length': np.nanmean(latest_ep_lengths),
+                                    'episode_terminated': np.nanmean(latest_ep_terminated),
                                 })
                                 log_metrics.update(self.common_metrics())
                                 self.logger.log(log_metrics, 'train')
@@ -205,13 +220,14 @@ class OnlineMultitaskTrainer(Trainer):
     
                 if self._step >= self.cfg.seed_steps:
                     if self._step - num_tasks < self.cfg.seed_steps:
-                        num_updates = self.cfg.seed_steps
-                        print('Pretraining agent on seed data...')
+                        num_updates = pretrain_steps
+                        print(f'Pretraining agent on seed data for {num_updates} updates...')
                     else:
                         num_updates = num_tasks  # maintain 1 update per env step collected
-                    for _ in range(int(num_updates)):
-                        _train_metrics = self.agent.update(self.buffer)
-                    train_metrics.update(_train_metrics)
+                    if num_updates > 0:
+                        for _ in range(int(num_updates)):
+                            _train_metrics = self.agent.update(self.buffer)
+                        train_metrics.update(_train_metrics)
     
                 self._step += num_tasks
                 

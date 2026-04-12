@@ -86,6 +86,7 @@ class OnlineTrainer(Trainer):
         Train the TD-MPC2 agent.
         """
         train_metrics, done, eval_next = {}, True, False 
+        pretrain_steps = int(getattr(self.cfg, 'pretrain_steps', min(self.cfg.seed_steps, 1000)))
         while self._step <= self.cfg.steps:
             # Evaluate agent periodically 
             if self._step % self.cfg.eval_freq == 0:
@@ -124,13 +125,14 @@ class OnlineTrainer(Trainer):
             # Update agent 
             if self._step >= self.cfg.seed_steps:
                 if self._step == self.cfg.seed_steps:
-                    num_updates = self.cfg.seed_steps
-                    print('Pretraining agent on seed data...')
+                    num_updates = pretrain_steps
+                    print(f'Pretraining agent on seed data for {num_updates} updates...')
                 else:
                     num_updates = 1
-                for _ in range(num_updates):
-                    _train_metrics = self.agent.update(self.buffer)
-                train_metrics.update(_train_metrics)
+                if num_updates > 0:
+                    for _ in range(num_updates):
+                        _train_metrics = self.agent.update(self.buffer)
+                    train_metrics.update(_train_metrics)
 
             self._step += 1
         self.logger.finish(self.agent)
