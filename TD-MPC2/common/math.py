@@ -105,13 +105,22 @@ def termination_statistics(pred, target, eps=1e-9):
     """
     pred = pred.squeeze(-1)
     target = target.squeeze(-1)
-    rate = target.sum() / len(target)
+    n = target.numel()
+    rate = target.sum() / n
     tp = ((pred > 0.5) & (target == 1)).sum()
     fn = ((pred <= 0.5) & (target == 1)).sum()
     fp = ((pred > 0.5) & (target == 0)).sum()
     recall = tp / (tp + fn + eps)
     precision = tp / (tp + fp + eps)
     f1 = 2 * (precision * recall) / (precision + recall + eps)
+    pred_rate = (pred > 0.5).float().sum() / n
+    accuracy = ((pred > 0.5) == (target == 1)).float().mean()
     return TensorDict({'termination_rate': rate,
+			'termination_pred_rate': pred_rate,
+			'termination_precision': precision,
+			'termination_recall': recall,
+			'termination_accuracy': accuracy,
+			'termination_target_count': target.sum(),
+			'termination_pred_count': (pred > 0.5).float().sum(),
 			'termination_f1': f1})
     

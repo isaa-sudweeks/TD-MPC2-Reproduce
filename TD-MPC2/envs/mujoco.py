@@ -55,6 +55,7 @@ class MuJoCoWrapper(gym.Wrapper):
         self._cumulative_reward += reward 
         done = terminated or truncated 
         info['terminated'] = terminated 
+        info['truncated'] = truncated
         if self.cfg.task == 'lunarlander-continuous':
             info['success'] = self._cumulative_reward > 200
         return obs, reward, done, info 

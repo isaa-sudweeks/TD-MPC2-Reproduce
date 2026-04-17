@@ -53,32 +53,46 @@ class OfflineTrainer(Trainer):
         fps = sorted(glob(str(fp)))
         assert len(fps) > 0, f'No data found at {fp}'
         print(f'Found {len(fps)} files at {fp}')
-        if len(fps) < (20 if self.cfg.task == 'mt80' else 4):
+        if self.cfg.task in {'mt30', 'mt80'} and len(fps) < (20 if self.cfg.task == 'mt80' else 4):
             print(f'WARNING: expected 20 files for mt80 task set, 4 files for mt30 task set, found {len(fps)} files.')
+
+        first_td = torch.load(fps[0], weights_only=False)
 
         # Create buffer for sampling TODO: Are they not just hard setting these in this code here?
         _cfg = deepcopy(self.cfg)
-        _cfg.episode_length = 101 if self.cfg.task == 'mt80' else 501
-        _cfg.buffer_size = 550_450_000 if self.cfg.task == 'mt80' else 345_690_000
+        if self.cfg.task == 'mt80':
+            _cfg.episode_length = 101
+            _cfg.buffer_size = 550_450_000
+        elif self.cfg.task == 'mt30':
+            _cfg.episode_length = 501
+            _cfg.buffer_size = 345_690_000
+        else:
+            _cfg.episode_length = first_td.shape[1]
+            _cfg.buffer_size = 0
+            for fp in fps:
+                td = torch.load(fp, weights_only=False)
+                _cfg.buffer_size += td.shape[0] * td.shape[1]
         _cfg.steps = _cfg.buffer_size
         self.buffer = Buffer(_cfg)
         for fp in tqdm(fps, desc='Loading dataset'):
             td = torch.load(fp, weights_only=False)
-            assert td.shape[1] == _cfg.episode_length, \
-                f'Expected episode length {td.shape[1]} to match config episode length {_cfg.episode_length}, ' \
-                    f' please double check your config.'
+            if self.cfg.task in {'mt30', 'mt80'}:
+                assert td.shape[1] == _cfg.episode_length, \
+                    f'Expected episode length {td.shape[1]} to match config episode length {_cfg.episode_length}, ' \
+                        f' please double check your config.'
 
             self.buffer.load(td)
-        expected_episodes = _cfg.buffer_size // _cfg.episode_length
-        if self.buffer.num_eps != expected_episodes:
-            print(f'WARNING: expected {expected_episodes} episodes, found {self.buffer.num_eps} episodes.')
+        if self.cfg.task in {'mt30', 'mt80'}:
+            expected_episodes = _cfg.buffer_size // _cfg.episode_length
+            if self.buffer.num_eps != expected_episodes:
+                print(f'WARNING: expected {expected_episodes} episodes, found {self.buffer.num_eps} episodes.')
         
     def train(self):
         """
         Train the TD-MPC2 agent.
         """
 
-        assert self.cfg.multitask and self.cfg.task in {'mt30', 'mt80'}, f'Task {self.cfg.task} not supported for offline training.'
+        assert self.cfg.multitask, f'Task {self.cfg.task} must be multitask for offline training.'
         self._load_dataset()
         print(f'Training for {self.cfg.steps} steps.')
         metrics = {}

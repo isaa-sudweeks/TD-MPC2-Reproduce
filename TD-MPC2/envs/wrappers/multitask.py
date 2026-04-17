@@ -9,13 +9,16 @@ class MultitaskWrapper:
         for task in cfg.tasks:
             cfg.task = task
             env = None 
+            errors = []
             for fn in make_env_fns:
                 try:
                     env = fn(cfg)
-                except ValueError:
+                except ValueError as exc:
+                    errors.append(str(exc))
                     pass 
             if env is None:
-                raise ValueError(f'Failed to make environment "{task}"')
+                details = '; '.join(errors)
+                raise ValueError(f'Failed to make environment "{task}": {details}')
             self.envs.append(env)
         
         cfg.task = original_task

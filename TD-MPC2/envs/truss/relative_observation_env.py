@@ -50,17 +50,15 @@ class MujocoRelativeObsEnv(MujocoTrussEnv):
         ]).astype(np.float32)
 
     def step(self, action):
-        current_ctrl = self.mj_model.data.ctrl.copy()
+        current_ctrl = self._sanitize_ctrl(self.mj_model.data.ctrl.copy())
         
         # Action is interpreted as a delta: [-1, 1] means [-speed, speed]
-        action = np.clip(action, self.action_space.low, self.action_space.high)
+        action = self._sanitize_action(action)
         speed = self.config.speed
         new_ctrl = current_ctrl + action * speed
         
-        # Clip to hardware (global actuator) limits so we don't break simulation bounds
-        global_low = self.mj_model.model.actuator_ctrlrange[:, 0]
-        global_high = self.mj_model.model.actuator_ctrlrange[:, 1]
-        new_ctrl = np.clip(new_ctrl, global_low, global_high)
+        # Clip to hardware (global actuator) limits so we don't break simulation bounds.
+        new_ctrl = self._sanitize_ctrl(new_ctrl)
         
         self.mj_model.data.ctrl[:] = new_ctrl
 

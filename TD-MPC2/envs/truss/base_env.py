@@ -82,8 +82,26 @@ class MujocoTrussEnv(gym.Env):
         dummy_obs = self._get_obs()
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=dummy_obs.shape, dtype=np.float32)
 
+    def _sanitize_box_value(self, value, low, high):
+        value = np.asarray(value, dtype=np.float32)
+        if value.shape != low.shape:
+            value = np.reshape(value, low.shape)
+
+        value = np.where(np.isnan(value), 0.0, value)
+        value = np.where(np.isposinf(value), high, value)
+        value = np.where(np.isneginf(value), low, value)
+        return np.clip(value, low, high).astype(np.float32, copy=False)
+
+    def _sanitize_action(self, action):
+        return self._sanitize_box_value(action, self.action_space.low, self.action_space.high)
+
+    def _sanitize_ctrl(self, ctrl):
+        ctrl_low = self.mj_model.model.actuator_ctrlrange[:, 0].astype(np.float32, copy=False)
+        ctrl_high = self.mj_model.model.actuator_ctrlrange[:, 1].astype(np.float32, copy=False)
+        return self._sanitize_box_value(ctrl, ctrl_low, ctrl_high)
+
     def step(self, action):
-        action = np.clip(action, self.action_space.low, self.action_space.high)
+        action = self._sanitize_ctrl(action)
         self.mj_model.data.ctrl[:] = action
 
         for _ in range(self.nsubsteps):

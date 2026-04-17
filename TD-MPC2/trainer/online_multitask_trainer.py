@@ -174,6 +174,7 @@ class OnlineMultitaskTrainer(Trainer):
                                 ep_success = float(infos_list[i]['success'])
                                 ep_length = len(tds_list[i])
                                 ep_terminated = float(infos_list[i]['terminated'])
+                                ep_truncated = float(infos_list[i]['truncated'])
                                 latest_ep_rewards[i] = ep_reward
                                 latest_ep_successes[i] = ep_success
                                 latest_ep_lengths[i] = ep_length
@@ -183,6 +184,7 @@ class OnlineMultitaskTrainer(Trainer):
                                     f'episode_success+{self.cfg.tasks[i]}': ep_success,
                                     f'episode_length+{self.cfg.tasks[i]}': ep_length,
                                     f'episode_terminated+{self.cfg.tasks[i]}': ep_terminated,
+                                    f'episode_truncated+{self.cfg.tasks[i]}': ep_truncated,
                                     'episode_reward': np.nanmean(latest_ep_rewards),
                                     'episode_success': np.nanmean(latest_ep_successes),
                                     'episode_length': np.nanmean(latest_ep_lengths),

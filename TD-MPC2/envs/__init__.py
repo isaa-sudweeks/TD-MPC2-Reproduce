@@ -6,29 +6,34 @@ from envs.wrappers.tensor import TensorWrapper
 
 # TODO: Add support for multitask envs 
 
-def missing_dependencies(task):
-	raise ValueError(f'Missing dependencies for task {task}; install dependencies to use this environment.')
+def _missing_dependencies_factory(name, exc):
+    def missing_dependencies(cfg):
+        task = getattr(cfg, 'task', cfg)
+        raise ValueError(
+            f'Missing dependencies for {name} task "{task}"; original import error: {exc}'
+        )
+    return missing_dependencies
 
 try:
 	from envs.dmcontrol import make_env as make_dm_control_env
-except:
-	make_dm_control_env = missing_dependencies
+except Exception as exc:
+	make_dm_control_env = _missing_dependencies_factory('dmcontrol', exc)
 try:
 	from envs.maniskill import make_env as make_maniskill_env
-except:
-	make_maniskill_env = missing_dependencies
+except Exception as exc:
+	make_maniskill_env = _missing_dependencies_factory('maniskill', exc)
 try:
 	from envs.metaworld import make_env as make_metaworld_env
-except:
-	make_metaworld_env = missing_dependencies
+except Exception as exc:
+	make_metaworld_env = _missing_dependencies_factory('metaworld', exc)
 try:
 	from envs.myosuite import make_env as make_myosuite_env
-except:
-	make_myosuite_env = missing_dependencies
+except Exception as exc:
+	make_myosuite_env = _missing_dependencies_factory('myosuite', exc)
 try:
 	from envs.mujoco import make_env as make_mujoco_env
-except:
-	make_mujoco_env = missing_dependencies
+except Exception as exc:
+	make_mujoco_env = _missing_dependencies_factory('mujoco', exc)
 
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
@@ -85,13 +90,16 @@ def make_env(cfg):
             cfg.obs_shape[k] = tuple(cfg.obs_shape[k])
         return env
     else:
+        errors = []
         for fn in [make_dm_control_env, make_maniskill_env, make_metaworld_env, make_myosuite_env, make_mujoco_env]:
             try:
                 env = fn(cfg)
-            except ValueError:
+            except ValueError as exc:
+                errors.append(str(exc))
                 pass 
         if env is None:
-            raise ValueError(f'Failed to make environment "{cfg.task}": please verify that dependencies are installed and that the task exists.')
+            details = '; '.join(errors)
+            raise ValueError(f'Failed to make environment "{cfg.task}": {details}')
         episode_length = _max_episode_steps(env)
         env = TensorWrapper(env)
         try: # Dict
@@ -103,6 +111,3 @@ def make_env(cfg):
         cfg.seed_steps = max(1000, 5*cfg.episode_length)
         # TODO: Add support for wrappers
         return env 
-
-def missing_dependencies():
-    raise ValueError("Missing dependencies for this environment")

@@ -20,6 +20,7 @@ class TDMPC2(torch.nn.Module):
         self.cfg = cfg
         self.device = torch.device(getattr(cfg, 'device', 'cuda'))
         self.model = WorldModel(cfg).to(self.device)
+        capturable = self.device.type in {"cuda", "xpu", "hpu", "privateuseone", "xla"}
         # I understand this for the most part but I need to figure out the mechanics a bit more
         self.optim = torch.optim.Adam([
             {'params': self.model._encoder.parameters(), 'lr': cfg.enc_lr_scale * cfg.lr},
@@ -28,8 +29,8 @@ class TDMPC2(torch.nn.Module):
             {'params': self.model._termination.parameters() if self.cfg.episodic else []},
             {'params': self.model._Qs.parameters()},
             {'params': self.model._task_emb.parameters() if self.cfg.multitask else []}
-        ], lr=self.cfg.lr, capturable=True)
-        self.pi_optim = torch.optim.Adam(self.model._pi.parameters(), lr=self.cfg.lr, eps=1e-5, capturable=True) # Why is this separate
+        ], lr=self.cfg.lr, capturable=capturable)
+        self.pi_optim = torch.optim.Adam(self.model._pi.parameters(), lr=self.cfg.lr, eps=1e-5, capturable=capturable) # Why is this separate
         self.model.eval()
         self.scale = RunningScale(cfg)
         self.cfg.iterations += 2*int(cfg.action_dim >= 20) # Heuristic for large action spaces but TODO: I still don't know what this is doing or why we need this
@@ -42,6 +43,29 @@ class TDMPC2(torch.nn.Module):
         self.register_buffer("_prev_mean", torch.zeros(self.cfg.horizon, self.cfg.action_dim, device=self.device))
         if cfg.compile:
             print('Skipping torch.compile for update: Inductor is unstable on this workload.')
+
+    def _task_indices(self, task):
+        if torch.device(self.device).type == 'mps':
+            device = 'cpu'
+        else:
+            device = self.device
+        if isinstance(task, int):
+            task = torch.tensor([task], device=device, dtype=torch.long)
+        else:
+            task = task.to(device=device, dtype=torch.long)
+        if (task < 0).any() or (task >= len(self.cfg.tasks)).any():
+            raise ValueError(f"Invalid task ids: {task.tolist()}")
+        return task
+
+    def _discount_for_task(self, task, dtype=torch.float32):
+        if torch.device(self.device).type == 'mps':
+            task = self._task_indices(task)
+            one_hot = F.one_hot(task, num_classes=len(self.cfg.tasks)).to(device=self.device, dtype=dtype)
+            return one_hot @ self.discount.to(dtype=dtype)
+        return self.discount[self._task_indices(task)]
+
+    def _safe_action(self, action):
+        return torch.nan_to_num(action, nan=0.0, posinf=1.0, neginf=-1.0).clamp(-1, 1)
     #TODO: Yeah dont know what is happening here 
     @property
     def plan(self):
@@ -110,14 +134,14 @@ class TDMPC2(torch.nn.Module):
 
         obs = obs.to(self.device, non_blocking=True).unsqueeze(0)
         if task is not None:
-            task = torch.tensor([task], device=self.device)
+            task = self._task_indices(task)
         if self.cfg.mpc:
-            return self.plan(obs, t0=t0, eval_mode=eval_mode, task=task).cpu()
+            return self._safe_action(self.plan(obs, t0=t0, eval_mode=eval_mode, task=task)).cpu()
         z = self.model.encode(obs, task)
         action, info = self.model.pi(z, task)
         if eval_mode:
             action = info['mean']
-        return action[0].cpu()
+        return self._safe_action(action[0]).cpu()
 
     @torch.no_grad()
     def _estimate_value(self, z, actions, task):
@@ -130,7 +154,7 @@ class TDMPC2(torch.nn.Module):
             reward = math.two_hot_inv(self.model.reward(z, actions[t], task), self.cfg)
             z = self.model.next(z, actions[t], task)
             G = G + discount * (1-termination) * reward
-            discount_update = self.discount[torch.as_tensor(task)] if self.cfg.multitask else self.discount 
+            discount_update = self._discount_for_task(task, dtype=G.dtype) if self.cfg.multitask else self.discount 
             discount = discount * discount_update 
             if self.cfg.episodic:
                 termination = torch.clip(termination + (self.model.termination(z, task) > 0.5).float(), max=1.)
@@ -181,7 +205,8 @@ class TDMPC2(torch.nn.Module):
             actions_sample = actions_sample.clamp(-1, 1)
             actions[:, self.cfg.num_pi_trajs:] = actions_sample 
             if self.cfg.multitask:
-                actions = actions * self.model._action_masks[task]
+                actions = actions * self.model.action_mask(task, actions.device, actions.dtype)
+            actions = self._safe_action(actions)
             
             # Compute 'elite' actions 
             value = self._estimate_value(z, actions, task).nan_to_num(nan=0)
@@ -196,8 +221,9 @@ class TDMPC2(torch.nn.Module):
             std = ((score.unsqueeze(0) * (elite_actions - mean.unsqueeze(1)) ** 2).sum(dim=1) / (score.sum(0) + 1e-9)).sqrt()
             std = std.clamp(self.cfg.min_std, self.cfg.max_std)
             if self.cfg.multitask:
-                mean = mean * self.model._action_masks[task]
-                std = std * self.model._action_masks[task]
+                action_mask = self.model.action_mask(task, mean.device, mean.dtype)
+                mean = mean * action_mask
+                std = std * action_mask
         
         # Select best action 
         rand_idx = math.gumbel_softmax_sample(score.squeeze(1))
@@ -205,8 +231,8 @@ class TDMPC2(torch.nn.Module):
         a, std = actions[0], std[0]
         if not eval_mode:
             a = a + std * torch.randn(self.cfg.action_dim, device=std.device)
-        self._prev_mean.copy_(mean)
-        return a.clamp(-1, 1)
+        self._prev_mean.copy_(self._safe_action(mean))
+        return self._safe_action(a)
 
     def update_pi(self, zs, task):
         """
@@ -264,7 +290,7 @@ class TDMPC2(torch.nn.Module):
         # TODO: I don't really get the TD stuff a lot
 
         action, _ = self.model.pi(next_z, task)
-        discount = self.discount[task].unsqueeze(-1) if self.cfg.multitask else self.discount
+        discount = self._discount_for_task(task, dtype=reward.dtype).unsqueeze(-1) if self.cfg.multitask else self.discount
         return reward + discount * (1-terminated) * self.model.Q(next_z, action, task, return_type='min', target=True)
     
     def _update(self, obs, action, reward, terminated, task=None):

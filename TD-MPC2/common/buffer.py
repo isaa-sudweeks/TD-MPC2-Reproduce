@@ -102,7 +102,15 @@ class Buffer():
         Prepare a batch of data for training.
         Expects 'td' to be a TensorDict with batch size TxB
         """
-        td = td.select("obs", "action", "reward", "terminated", "task", strict=False).to(self._device, non_blocking=True)
+        task = td.get('task', None)
+        if task is not None:
+            task = task[0].contiguous().to('cpu', dtype=torch.long)
+            if (task < 0).any() or (task >= len(self.cfg.tasks)).any():
+                raise ValueError(f"Sampled invalid task ids: {task.tolist()}")
+            if self._device.type != 'mps':
+                task = task.to(self._device, non_blocking=True)
+
+        td = td.select("obs", "action", "reward", "terminated", strict=False).to(self._device, non_blocking=True)
         obs = td.get('obs').contiguous()
         action = td.get('action')[1:].contiguous()
         reward = td.get('reward')[1:].unsqueeze(-1).contiguous()
@@ -112,9 +120,6 @@ class Buffer():
         else:
             terminated = torch.zeros_like(reward)
 
-        task = td.get('task', None)
-        if task is not None:
-            task = task[0].contiguous()
         return obs, action, reward, terminated, task
 
     def sample(self):

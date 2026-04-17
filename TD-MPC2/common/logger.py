@@ -153,20 +153,22 @@ class Logger:
 			self._video = None
 			return
 		os.environ["WANDB_SILENT"] = "true" if cfg.wandb_silent else "false"
+		wandb_mode = cfg.get("wandb_mode", "offline")
 		import wandb
 
 		wandb.init(
 			project=self.project,
 			entity=self.entity,
-			mode="offline",
+			mode=wandb_mode,
 			name=wandb_run_name(cfg),
 			group=self._group,
 			tags=wandb_tags(cfg),
 			dir=self._log_dir,
 			config=dataclasses.asdict(cfg),
 		)
-		print(colored("Wandb initialized in offline mode.", "blue", attrs=["bold"]))
-		print(colored(f"Sync with: wandb sync {self._log_dir / 'wandb' / 'offline-run-*'}", "blue"))
+		print(colored(f"Wandb initialized in {wandb_mode} mode.", "blue", attrs=["bold"]))
+		if wandb_mode == "offline":
+			print(colored(f"Sync with: wandb sync {self._log_dir / 'wandb' / 'offline-run-*'}", "blue"))
 		self._wandb = wandb
 		self._video = (
 			VideoRecorder(cfg, self._wandb)

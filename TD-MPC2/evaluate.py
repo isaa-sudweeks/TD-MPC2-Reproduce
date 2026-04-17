@@ -1,5 +1,7 @@
 import os 
-os.environ['MUJOCO_GL'] = os.getenv("MUJOCO_GL", 'egl')
+import platform
+_default_mujoco_gl = 'glfw' if platform.system() == 'Darwin' else 'egl'
+os.environ['MUJOCO_GL'] = os.getenv("MUJOCO_GL", _default_mujoco_gl)
 import warnings 
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 

@@ -1,12 +1,14 @@
 from pathlib import Path
 import sys
 import os
+import platform
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-os.environ['MUJOCO_GL'] = os.getenv("MUJOCO_GL", 'egl')
+_default_mujoco_gl = 'glfw' if platform.system() == 'Darwin' else 'egl'
+os.environ['MUJOCO_GL'] = os.getenv("MUJOCO_GL", _default_mujoco_gl)
 os.environ['LAZY_LEGACY_OP'] = '0'
 os.environ['TORCHDYNAMO_INLINE_INBUILT_NN_MODULES'] = "1"
 os.environ['TORCH_LOGS'] = "+recompiles"
@@ -44,8 +46,10 @@ def run_training(cfg, trial=None):
 
     print(colored('Work dir:', 'yellow', attrs=['bold']), cfg.work_dir)
 
-    if cfg.multitask:
-        trainer_clf = OfflineTrainer if cfg.task in {'mt30', 'mt80'} else OnlineMultitaskTrainer
+    if getattr(cfg, 'offline', False):
+        trainer_clf = OfflineTrainer
+    elif cfg.multitask:
+        trainer_clf = OnlineMultitaskTrainer
     else:
         trainer_clf = OnlineTrainer
     env = make_env(cfg)

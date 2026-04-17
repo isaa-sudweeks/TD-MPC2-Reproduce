@@ -21,5 +21,7 @@ class Timeout(gym.Wrapper):
 	def step(self, action):
 		obs, reward, done, info = self.env.step(action)
 		self._t += 1
-		done = done or self._t >= self.max_episode_steps
+		timed_out = self._t >= self.max_episode_steps
+		info['truncated'] = bool(info.get('truncated', False) or (timed_out and not done))
+		done = done or timed_out
 		return obs, reward, done, info

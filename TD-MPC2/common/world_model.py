@@ -1,6 +1,7 @@
 from copy import deepcopy 
 import torch 
 import torch.nn as nn
+import torch.nn.functional as F
 from common import layers, math, init 
 from tensordict import TensorDict 
 from tensordict.nn import TensorDictParams 
@@ -13,7 +14,8 @@ class WorldModel(nn.Module):
         super().__init__()
         self.cfg = cfg
         if cfg.multitask:
-            self._task_emb = nn.Embedding(len(cfg.tasks), cfg.task_dim, max_norm=1) # TODO: Figure out what the nn.Embedding does '
+            max_norm = None if torch.device(getattr(cfg, 'device', 'cuda')).type == 'mps' else 1
+            self._task_emb = nn.Embedding(len(cfg.tasks), cfg.task_dim, max_norm=max_norm) # TODO: Figure out what the nn.Embedding does '
             self.register_buffer("_action_masks", torch.zeros(len(cfg.tasks), cfg.action_dim)) # TODO: Figure out what this does
             for i in range(len(cfg.tasks)):
                 self._action_masks[i, :cfg.action_dims[i]] = 1.
@@ -34,6 +36,27 @@ class WorldModel(nn.Module):
         self.register_buffer("log_std_min", torch.tensor(cfg.log_std_min))
         self.register_buffer("log_std_def", torch.tensor(cfg.log_std_max) - self.log_std_min)
         self.init()
+
+    def _task_indices(self, task, device):
+        if torch.device(device).type == 'mps':
+            device = 'cpu'
+        if isinstance(task, int):
+            task = torch.tensor([task], device=device, dtype=torch.long)
+        else:
+            task = task.to(device=device, dtype=torch.long)
+        if (task < 0).any() or (task >= len(self.cfg.tasks)).any():
+            raise ValueError(f"Invalid task ids: {task.tolist()}")
+        return task
+
+    def _task_one_hot(self, task, device, dtype):
+        task = self._task_indices(task, device)
+        return F.one_hot(task, num_classes=len(self.cfg.tasks)).to(device=device, dtype=dtype)
+
+    def action_mask(self, task, device, dtype):
+        if torch.device(device).type == 'mps':
+            return self._task_one_hot(task, device, dtype) @ self._action_masks.to(dtype=dtype)
+        task = self._task_indices(task, device)
+        return self._action_masks[task].to(dtype=dtype)
     
     def init(self):
         # Create params
@@ -91,9 +114,11 @@ class WorldModel(nn.Module):
         and concatenates it to the input 'x'.
         """
         # TODO: I don't really think I need this because I am just doing one task for now 
-        if isinstance(task, int):
-            task = torch.tensor([task], device=x.device)
-        emb = self._task_emb(task.long())
+        if torch.device(x.device).type == 'mps':
+            emb = self._task_one_hot(task, x.device, self._task_emb.weight.dtype) @ F.normalize(self._task_emb.weight, p=2, dim=1)
+        else:
+            task = self._task_indices(task, x.device)
+            emb = self._task_emb(task)
         if x.ndim ==3:
             emb = emb.unsqueeze(0).repeat(x.shape[0], 1, 1)
         elif emb.shape[0] == 1:
@@ -148,6 +173,7 @@ class WorldModel(nn.Module):
 
         # TODO: Figure this out why does it predict the Gaussian distribution rather than predict it directly
         if self.cfg.multitask:
+            task = self._task_indices(task, z.device)
             z = self.task_emb(z, task)
 
         # Gaussian policy prior 
@@ -156,9 +182,10 @@ class WorldModel(nn.Module):
         eps = torch.randn_like(mean)
 
         if self.cfg.multitask: # mask out unused action dimensions 
-            mean = mean * self._action_masks[task] # This masking stuff I have no idea what is happening
-            log_std = log_std * self._action_masks[task]
-            action_dims = self._action_masks.sum(-1)[task].unsqueeze(-1)
+            action_mask = self.action_mask(task, mean.device, mean.dtype)
+            mean = mean * action_mask # This masking stuff I have no idea what is happening
+            log_std = log_std * action_mask
+            action_dims = action_mask.sum(-1, keepdim=True)
         else: # No masking 
             action_dims = None 
 

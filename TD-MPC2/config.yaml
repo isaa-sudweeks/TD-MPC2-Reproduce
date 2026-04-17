@@ -85,6 +85,7 @@ wandb_project: TD-MPC2
 wandb_entity: i-suds
 wandb_silent: false
 enable_wandb: true
+wandb_mode: offline
 
 # Optuna
 save_csv: true

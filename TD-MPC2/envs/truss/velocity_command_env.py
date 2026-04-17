@@ -21,8 +21,8 @@ class MujocoVelocityCommandEnv(MujocoRelativeObsEnv):
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.mj_model.model.nu,), dtype=np.float32)
 
     def step(self, action):
-        action = np.clip(action, self.action_space.low, self.action_space.high)
-        ctrl = action * self.config.speed
+        action = self._sanitize_action(action)
+        ctrl = self._sanitize_ctrl(action * self.config.speed)
         self.mj_model.data.ctrl[:] = ctrl
 
         for _ in range(self.nsubsteps):
