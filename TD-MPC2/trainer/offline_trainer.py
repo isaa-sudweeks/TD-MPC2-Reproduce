@@ -43,6 +43,13 @@ class OfflineTrainer(Trainer):
                 f'episode_reward+{self.cfg.tasks[task_idx]}' : np.nanmean(ep_rewards),
                 f'episode_success+{self.cfg.tasks[task_idx]}' : np.nanmean(ep_successes),
             })
+        if len(self.cfg.tasks) > 0:
+            results['episode_reward'] = np.nanmean([
+                results[f'episode_reward+{task}'] for task in self.cfg.tasks
+            ])
+            results['episode_success'] = np.nanmean([
+                results[f'episode_success+{task}'] for task in self.cfg.tasks
+            ])
         return results
 
     def _load_dataset(self):
